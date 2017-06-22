@@ -7,7 +7,7 @@
     "test": "echo \"Error: no test specified\" && exit 1",
     "pretest": "eslint *.js",
     "dev": "webpack --progress --colors --watch",
-    "heroku-postbuild": "webpack -p --config ./webpack.config.js",
+    "heroku-postbuild": "node_modules/.bin/webpack -p --config ./webpack.config.js",
     "start": "node server.js",
     "dev:server": "cross-env ACCESS_USERNAME=test cross-env ACCESS_PASSWORD=test node server.js"
   },
