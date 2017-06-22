@@ -7,7 +7,7 @@
     "test": "echo \"Error: no test specified\" && exit 1",
     "pretest": "eslint *.js",
     "dev": "webpack --progress --colors --watch",
-    "heroku-postbuild": "./node_modules/.bin/webpack -p --config ./webpack.config.js",
+    "bundle": "cross-env NODE_ENV=production -p",
     "start": "node server.js",
     "dev:server": "cross-env ACCESS_USERNAME=test cross-env ACCESS_PASSWORD=test node server.js"
   },
@@ -15,15 +15,19 @@
   "author": "",
   "license": "ISC",
   "dependencies": {
+    "express-basic-auth": "^1.1.1",
+    "express": "^4.15.3"
+  },
+  "devDependencies": {
     "babel-core": "^6.24.1",
     "babel-loader": "^7.0.0",
     "babel-plugin-transform-object-rest-spread": "^6.23.0",
     "babel-preset-env": "^1.4.0",
     "babel-preset-react": "^6.24.1",
+    "cross-env": "^5.0.1",
     "deep-equal": "^1.0.1",
-    "express-basic-auth": "^1.1.1",
-    "express": "^4.15.3",
-    "has-flag": "^2.0.0",
+    "eslint-config-kokarn": "^3.0.2",
+    "eslint": "^4.0.0",
     "material-ui": "^0.18.1",
     "prop-types": "^15.5.10",
     "react-cookies": "0.0.1",
@@ -31,11 +35,6 @@
     "react-tap-event-plugin": "^2.0.1",
     "react": "^15.5.4",
     "webpack": "^2.5.1"
-  },
-  "devDependencies": {
-    "cross-env": "^5.0.1",
-    "eslint": "^4.0.0",
-    "eslint-config-kokarn": "^3.0.2"
   },
   "engines": {
     "node": "^8.0.0"
