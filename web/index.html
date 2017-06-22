@@ -38,4 +38,27 @@
 <body>
     <div id="app" class="app-wrapper"></div>
     <script src="scripts/app.js"></script>
+    <script>
+        (function(){
+            function getCookie(name) {
+                var value = "; " + document.cookie;
+                var parts = value.split("; " + name + "=");
+                if (parts.length == 2) return parts.pop().split(";").shift();
+            }
+
+            fetch(
+                '/api-token',
+                {
+                    headers: {
+                        Authorization: 'Basic ' + btoa( getCookie( 'request-user' ) + ':' + getCookie( 'request-password' ) ),
+                    },
+                }
+            )
+                .then( function(response) {
+                    return response.text();
+                } ).then( function( body ) {
+                    window.apiToken = body;
+                } );
+        })();
+    </script>
 </body>

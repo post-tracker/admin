@@ -8,18 +8,11 @@ const API_HOSTNAME = 'api.kokarn.com';
 const API_PORT = 443;
 const SUCESS_STATUS_CODE = 200;
 
-// eslint-disable-next-line no-process-env
-const API_TOKEN = process.env.apiToken;
-
-if ( !API_TOKEN ) {
-    throw new Error( 'Unable to load API token' );
-}
-
 const get = function get ( requestPath, queryParams ) {
     return new Promise( ( resolve, reject ) => {
         const options = {
             headers: {
-                Authorization: `Bearer ${ API_TOKEN }`,
+                Authorization: `Bearer ${ window.apiToken }`,
             },
             hostname: API_HOSTNAME,
             method: 'GET',
@@ -67,7 +60,7 @@ const post = function post ( requestPath, item ) {
         const payload = JSON.stringify( item );
         const options = {
             headers: {
-                Authorization: `Bearer ${ API_TOKEN }`,
+                Authorization: `Bearer ${ window.apiToken }`,
                 'Content-Length': Buffer.byteLength( payload ),
                 'Content-Type': 'application/json',
             },
@@ -109,7 +102,7 @@ const patch = function patch ( requestPath, id, properties ) {
         } );
         const options = {
             headers: {
-                Authorization: `Bearer ${ API_TOKEN }`,
+                Authorization: `Bearer ${ window.apiToken }`,
                 'Content-Length': Buffer.byteLength( payload ),
                 'Content-Type': 'application/json',
             },
@@ -147,7 +140,7 @@ const deleteResource = function deleteResource ( resourcePath ) {
     return new Promise( ( resolve, reject ) => {
         const options = {
             headers: {
-                Authorization: `Bearer ${ API_TOKEN }`,
+                Authorization: `Bearer ${ window.apiToken }`,
             },
             hostname: API_HOSTNAME,
             method: 'DELETE',

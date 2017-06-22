@@ -113,6 +113,12 @@ class Games extends React.Component {
     }
 
     getGamesData () {
+        if ( !window.apiToken ) {
+            setTimeout( this.getGamesData.bind( this ), 100 );
+
+            return false;
+        }
+
         api.get( '/games' )
             .then( ( games ) => {
                 let currentGame = games.data[ 0 ];
