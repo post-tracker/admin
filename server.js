@@ -26,7 +26,7 @@ app.use( basicAuth( {
 } ) );
 app.use( express.static( path.join( __dirname, 'web' ) ) );
 
-app.listen( LISTEN_PORT, () => {
+app.listen( process.env.PORT || LISTEN_PORT, () => {
     // eslint-disable-next-line no-process-env
     console.log( `Admin interface listening on port ${ process.env.PORT || LISTEN_PORT }!` );
 } );
