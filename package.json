@@ -9,7 +9,7 @@
     "dev": "webpack --progress --colors --watch",
     "bundle": "cross-env NODE_ENV=production webpack -p --progress --colors",
     "start": "node server.js",
-    "dev:server": "cross-env ACCESS_USERNAME=test cross-env ACCESS_PASSWORD=test node server.js"
+    "dev:server": "cross-env ACCESS_USERNAME=test ACCESS_PASSWORD=test API_TOKEN=test node server.js"
   },
   "keywords": [],
   "author": "",
