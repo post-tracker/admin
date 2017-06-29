@@ -60,8 +60,6 @@ class AddDeveloper extends React.Component {
             newPost.role = this.state.role;
         }
 
-        console.log( newPost );
-
         api.post( `/${ this.props.gameId }/developers`, newPost )
             .then( () => {
                 this.setState( {

@@ -195,7 +195,7 @@ class Games extends React.Component {
             showMenu: false,
         };
 
-        for ( let i = 0; i < this.state.games; i = i + 1 ) {
+        for ( let i = 0; i < this.state.games.length; i = i + 1 ) {
             if ( this.state.games[ i ].identifier === identifier ) {
                 newState.gameNumber = this.state.games[ i ].id;
 
