@@ -28,7 +28,7 @@
     "babel-preset-react": "^6.24.1",
     "cross-env": "^5.0.1",
     "deep-equal": "^1.0.1",
-    "eslint": "^4.0.0",
+    "eslint": "^4.1.1",
     "eslint-config-kokarn": "^3.0.2",
     "material-ui": "^0.18.1",
     "prop-types": "^15.5.10",
@@ -60,6 +60,14 @@
       "no-console": [
         "off"
       ]
+  },
+  "overrides": [
+    {
+      "files": [ "*.js" ],
+      "env": {
+          "node": true
+      }
     }
+  ]
   }
 }
