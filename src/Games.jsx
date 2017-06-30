@@ -12,6 +12,8 @@ import Developer from './Developer.jsx';
 import AddDeveloper from './AddDeveloper.jsx';
 import api from './api.js';
 
+const INIT_LOAD_WAIT_TIMEOUT = 100;
+
 const styles = {
     activeMenuItem: {
         color: 'red',
@@ -134,7 +136,7 @@ class Games extends React.Component {
 
     getGamesData () {
         if ( !window.apiToken ) {
-            setTimeout( this.getGamesData.bind( this ), 100 );
+            setTimeout( this.getGamesData.bind( this ), INIT_LOAD_WAIT_TIMEOUT );
 
             return false;
         }
@@ -165,6 +167,8 @@ class Games extends React.Component {
                 // eslint-disable-next-line no-console
                 console.error( error );
             } );
+
+        return true;
     }
 
     getGames () {

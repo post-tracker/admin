@@ -68,7 +68,7 @@ class AddService extends React.Component {
                 this.setState( {
                     snackbarOpen: true,
                     snackbarText: 'Failed to add account',
-                } )
+                } );
             } );
     }
 

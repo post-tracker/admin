@@ -120,12 +120,12 @@ class DeveloperField extends React.Component {
                         style: {
                             bottom: 0,
                             overflowY: 'auto',
-                        }
+                        },
                     } }
                     searchText = { this.state.newValue || this.props.value }
                     underlineShow = { false }
                 />
-            )
+            );
         }
 
         return (
