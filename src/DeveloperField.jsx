@@ -7,6 +7,7 @@ import IconButton from 'material-ui/IconButton';
 import ActionDelete from 'material-ui/svg-icons/action/delete';
 import ContentSave from 'material-ui/svg-icons/content/save';
 import Snackbar from 'material-ui/Snackbar';
+import AutoComplete from 'material-ui/AutoComplete';
 
 import api from './api.js';
 
@@ -29,6 +30,7 @@ class DeveloperField extends React.Component {
         this.handleDelete = this.handleDelete.bind( this );
         this.handleSave = this.handleSave.bind( this );
         this.handleSnackbarClose = this.handleSnackbarClose.bind( this );
+        this.getInputField = this.getInputField.bind( this );
 
         this.state = {
             newValue: false,
@@ -37,10 +39,16 @@ class DeveloperField extends React.Component {
         };
     }
 
-    handleValueChange ( event ) {
-        let newValue = event.target.value;
+    handleValueChange ( valueOrEvent ) {
+        let newValue = valueOrEvent;
 
-        if ( event.target.value === this.props.value ) {
+        console.log( valueOrEvent );
+
+        if ( valueOrEvent.target ) {
+            newValue = valueOrEvent.target.value;
+        }
+
+        if ( newValue === this.props.value ) {
             newValue = false;
         }
 
@@ -96,20 +104,49 @@ class DeveloperField extends React.Component {
         } );
     }
 
+    getInputField () {
+        if ( this.props.availableOptions.length > 0 ) {
+            return (
+                <AutoComplete
+                    dataSource = { this.props.availableOptions }
+                    filter = { AutoComplete.noFilter }
+                    floatingLabelFixed
+                    floatingLabelText = { this.props.displayName || this.props.name }
+                    key = { `${ this.props.name }-${ this.props.value }` }
+                    onUpdateInput = { this.handleValueChange }
+                    openOnFocus
+                    popoverProps = { {
+                        canAutoPosition: true,
+                        style: {
+                            bottom: 0,
+                            overflowY: 'auto',
+                        }
+                    } }
+                    searchText = { this.state.newValue || this.props.value }
+                    underlineShow = { false }
+                />
+            )
+        }
+
+        return (
+            <TextField
+                defaultValue = { this.props.value }
+                floatingLabelFixed
+                floatingLabelText = { this.props.displayName || this.props.name }
+                key = { `${ this.props.name }-${ this.props.value }` }
+                name = { this.props.name }
+                onKeyUp = { this.handleValueChange }
+                underlineShow = { false }
+            />
+        );
+    }
+
     render () {
         return (
             <div
                 style = { styles.wrapper }
             >
-                <TextField
-                    defaultValue = { this.props.value }
-                    floatingLabelFixed
-                    floatingLabelText = { this.props.displayName || this.props.name }
-                    key = { `${ this.props.name }-${ this.props.value }` }
-                    name = { this.props.name }
-                    onKeyUp = { this.handleValueChange }
-                    underlineShow = { false }
-                />
+                { this.getInputField() }
                 {
                     ( () => {
                         if ( this.state.newValue !== false ) {
@@ -152,12 +189,14 @@ class DeveloperField extends React.Component {
 DeveloperField.displayName = 'DeveloperField';
 
 DeveloperField.defaultProps = {
+    availableOptions: [],
     delete: false,
     displayName: '',
     value: '',
 };
 
 DeveloperField.propTypes = {
+    availableOptions: PropTypes.arrayOf( PropTypes.string ),
     delete: PropTypes.bool,
     displayName: PropTypes.string,
     gameId: PropTypes.string.isRequired,

@@ -1,6 +1,7 @@
 import React from 'react';
 import deepEqual from 'deep-equal';
 import cookie from 'react-cookies';
+import alphanumSort from 'alphanum-sort';
 
 import Drawer from 'material-ui/Drawer';
 import FloatingActionButton from 'material-ui/FloatingActionButton';
@@ -101,9 +102,28 @@ class Games extends React.Component {
         }
 
         api.get( `/${ useId }/developers` )
-            .then( ( developerData ) => {
+            .then( ( developers ) => {
+                const services = [];
+                const groups = [];
+
+                for ( let i = 0; i < developers.data.length; i = i + 1 ) {
+                    for ( let accountIndex = 0; accountIndex < developers.data[ i ].accounts.length; accountIndex = accountIndex + 1 ) {
+                        services.push( developers.data[ i ].accounts[ accountIndex ].service );
+                    }
+
+                    if ( developers.data[ i ].group ) {
+                        groups.push( developers.data[ i ].group );
+                    }
+                }
+
                 this.setState( {
-                    developers: developerData.data,
+                    developers: developers.data,
+                    groups: alphanumSort( [ ...new Set( groups ) ], {
+                        insensitive: true,
+                    } ),
+                    services: alphanumSort( [ ...new Set( services ) ], {
+                        insensitive: true,
+                    } ),
                 } );
             } )
             .catch( ( error ) => {
@@ -179,6 +199,8 @@ class Games extends React.Component {
             developerNodes.push(
                 <Developer
                     { ...this.state.developers[ developerId ] }
+                    availableGroups = { this.state.groups }
+                    availableServices = { this.state.services }
                     gameId = { this.state.gameId }
                     key = { developerId }
                 />

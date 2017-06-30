@@ -92,6 +92,7 @@ class Developer extends React.Component {
                     value = { this.props.name }
                 />
                 <DeveloperField
+                    availableOptions = { this.props.availableGroups }
                     displayName = { 'Group' }
                     gameId = { this.props.gameId }
                     id = { this.props.id }
@@ -109,6 +110,8 @@ class Developer extends React.Component {
                 />
                 { this.getAccounts() }
                 <AddService
+                    availableGroups = { this.props.availableGroups }
+                    availableServices = { this.props.availableServices }
                     developerId = { this.props.id }
                     gameId = { this.props.gameId }
                 />
@@ -121,6 +124,8 @@ Developer.displayName = 'Developer';
 
 Developer.defaultProps = {
     active: 1,
+    availableGroups: [],
+    availableServices: [],
     group: '',
     name: '',
     nick: '',
@@ -136,10 +141,12 @@ Developer.propTypes = {
                     identifier: PropTypes.string.isRequired,
                     service: PropTypes.string.isRequired,
                 } )
-            )
+            ),
         ]
     ).isRequired,
     active: PropTypes.bool,
+    availableGroups: PropTypes.arrayOf( PropTypes.string ),
+    availableServices: PropTypes.arrayOf( PropTypes.string ),
     gameId: PropTypes.string.isRequired,
     group: PropTypes.string,
     id: PropTypes.number.isRequired,

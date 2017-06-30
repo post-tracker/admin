@@ -20,6 +20,7 @@
     "express-basic-auth": "^1.1.1"
   },
   "devDependencies": {
+    "alphanum-sort": "^1.0.2",
     "babel-core": "^6.24.1",
     "babel-loader": "^7.0.0",
     "babel-plugin-transform-object-rest-spread": "^6.23.0",
@@ -27,14 +28,14 @@
     "babel-preset-react": "^6.24.1",
     "cross-env": "^5.0.1",
     "deep-equal": "^1.0.1",
-    "eslint-config-kokarn": "^3.0.2",
     "eslint": "^4.0.0",
+    "eslint-config-kokarn": "^3.0.2",
     "material-ui": "^0.18.1",
     "prop-types": "^15.5.10",
+    "react": "^15.5.4",
     "react-cookies": "0.0.1",
     "react-dom": "^15.5.4",
     "react-tap-event-plugin": "^2.0.1",
-    "react": "^15.5.4",
     "webpack": "^2.5.1"
   },
   "engines": {

@@ -7,6 +7,7 @@ import FloatingActionButton from 'material-ui/FloatingActionButton';
 import ContentAdd from 'material-ui/svg-icons/content/add';
 import RaisedButton from 'material-ui/RaisedButton';
 import Snackbar from 'material-ui/Snackbar';
+import AutoComplete from 'material-ui/AutoComplete';
 
 import api from './api.js';
 
@@ -31,6 +32,7 @@ class AddService extends React.Component {
         this.handleKeyUp = this.handleKeyUp.bind( this );
         this.handleSave = this.handleSave.bind( this );
         this.handleSnackbarClose = this.handleSnackbarClose.bind( this );
+        this.handleServiceChange = this.handleServiceChange.bind( this );
 
         this.state = {
             isOpen: false,
@@ -70,6 +72,12 @@ class AddService extends React.Component {
             } );
     }
 
+    handleServiceChange ( serviceValue ) {
+        this.setState( {
+            service: serviceValue,
+        } );
+    }
+
     handleKeyUp ( event ) {
         const newState = {};
 
@@ -89,13 +97,14 @@ class AddService extends React.Component {
 
         if ( this.state.isOpen ) {
             returnNodes.push(
-                <TextField
+                <AutoComplete
+                    dataSource = { this.props.availableServices }
+                    filter = { AutoComplete.noFilter }
                     floatingLabelFixed
                     floatingLabelText = { 'Service' }
-                    // hintText = { name }
                     key = { 'add-account-service' }
-                    name = { 'service' }
-                    onKeyUp = { this.handleKeyUp }
+                    onUpdateInput = { this.handleServiceChange }
+                    openOnFocus
                     underlineShow = { false }
                 />
             );
@@ -174,7 +183,12 @@ class AddService extends React.Component {
 
 AddService.displayName = 'AddService';
 
+AddService.defaultProps = {
+    availableServices: [],
+};
+
 AddService.propTypes = {
+    availableServices: PropTypes.arrayOf( PropTypes.string ),
     developerId: PropTypes.number.isRequired,
     gameId: PropTypes.string.isRequired,
 };
