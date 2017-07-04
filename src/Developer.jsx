@@ -64,7 +64,7 @@ class Developer extends React.Component {
                 zDepth = { 1 }
             >
                 <h3>
-                    { this.props.nick }
+                    { `${ this.props.nick } - ${ this.props.id }` }
                     <div
                         style = { styles.activeWrapper }
                     >

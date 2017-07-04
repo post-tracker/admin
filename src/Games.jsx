@@ -118,6 +118,10 @@ class Games extends React.Component {
                     }
                 }
 
+                developers.data.sort( ( a, b ) => {
+                    return a.nick.localeCompare( b.nick );
+                } );
+
                 this.setState( {
                     developers: developers.data,
                     groups: alphanumSort( [ ...new Set( groups ) ], {
