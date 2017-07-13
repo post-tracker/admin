@@ -30,7 +30,7 @@
     "deep-equal": "^1.0.1",
     "eslint": "^4.1.1",
     "eslint-config-kokarn": "^3.0.2",
-    "material-ui": "^0.18.1",
+    "material-ui": "^0.18.6",
     "prop-types": "^15.5.10",
     "react": "^15.5.4",
     "react-cookies": "0.0.1",
