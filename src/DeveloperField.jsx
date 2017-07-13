@@ -1,6 +1,8 @@
 import React from 'react';
 import PropTypes from 'prop-types';
 
+import Dialog from 'material-ui/Dialog';
+import FlatButton from 'material-ui/FlatButton';
 import Divider from 'material-ui/Divider';
 import TextField from 'material-ui/TextField';
 import IconButton from 'material-ui/IconButton';
@@ -31,8 +33,11 @@ class DeveloperField extends React.Component {
         this.handleSave = this.handleSave.bind( this );
         this.handleSnackbarClose = this.handleSnackbarClose.bind( this );
         this.getInputField = this.getInputField.bind( this );
+        this.handleDeleteClick = this.handleDeleteClick.bind( this );
+        this.handleCancelClick = this.handleCancelClick.bind( this );
 
         this.state = {
+            confirmOpen: false,
             newValue: false,
             snackbarOpen: false,
             snackbarText: '',
@@ -41,8 +46,6 @@ class DeveloperField extends React.Component {
 
     handleValueChange ( valueOrEvent ) {
         let newValue = valueOrEvent;
-
-        console.log( valueOrEvent );
 
         if ( valueOrEvent.target ) {
             newValue = valueOrEvent.target.value;
@@ -61,6 +64,7 @@ class DeveloperField extends React.Component {
         api.deleteResource( `/${ this.props.gameId }/${ this.props.type }/${ this.props.id }` )
             .then( () => {
                 this.setState( {
+                    confirmOpen: false,
                     snackbarOpen: true,
                     snackbarText: 'Property deleted',
                 } );
@@ -69,6 +73,7 @@ class DeveloperField extends React.Component {
             } )
             .catch( ( error ) => {
                 this.setState( {
+                    confirmOpen: false,
                     snackbarOpen: true,
                     snackbarText: error.message,
                 } );
@@ -101,6 +106,18 @@ class DeveloperField extends React.Component {
     handleSnackbarClose () {
         this.setState( {
             snackbarOpen: false,
+        } );
+    }
+
+    handleDeleteClick () {
+        this.setState( {
+            confirmOpen: true,
+        } );
+    }
+
+    handleCancelClick () {
+        this.setState( {
+            confirmOpen: false,
         } );
     }
 
@@ -142,6 +159,21 @@ class DeveloperField extends React.Component {
     }
 
     render () {
+        const actions = [
+            <FlatButton
+                key = 'cancel-delete'
+                label = { 'No' }
+                onTouchTap = { this.handleCancelClick }
+                primary
+            />,
+            <FlatButton
+                key = 'confirm-delete'
+                label = { 'Yes' }
+                onTouchTap = { this.handleDelete }
+                primary
+            />,
+        ];
+
         return (
             <div
                 style = { styles.wrapper }
@@ -161,7 +193,7 @@ class DeveloperField extends React.Component {
                         } else if ( this.props.delete ) {
                             return (
                                 <IconButton
-                                    onTouchTap = { this.handleDelete }
+                                    onTouchTap = { this.handleDeleteClick }
                                     style = { styles.actionButton }
                                 >
                                     <ActionDelete />
@@ -172,6 +204,14 @@ class DeveloperField extends React.Component {
                         return false;
                     } )()
                 }
+                <Dialog
+                    actions = { actions }
+                    modal = { false }
+                    onRequestClose = { this.handleClose }
+                    open = { this.state.confirmOpen }
+                >
+                    { `Are you sure you want to delete "${ this.props.name }-${ this.props.value }" ?` }
+                </Dialog>
                 <Divider
                     key = { `${ this.props.name }-${ this.props.value }-divider` }
                 />
