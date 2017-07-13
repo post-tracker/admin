@@ -6,7 +6,6 @@ import TextField from 'material-ui/TextField';
 import FloatingActionButton from 'material-ui/FloatingActionButton';
 import ContentAdd from 'material-ui/svg-icons/content/add';
 import RaisedButton from 'material-ui/RaisedButton';
-import Snackbar from 'material-ui/Snackbar';
 import AutoComplete from 'material-ui/AutoComplete';
 
 import api from './api.js';
@@ -31,13 +30,10 @@ class AddService extends React.Component {
         this.handleToggle = this.handleToggle.bind( this );
         this.handleKeyUp = this.handleKeyUp.bind( this );
         this.handleSave = this.handleSave.bind( this );
-        this.handleSnackbarClose = this.handleSnackbarClose.bind( this );
         this.handleServiceChange = this.handleServiceChange.bind( this );
 
         this.state = {
             isOpen: false,
-            snackbarOpen: false,
-            snackbarText: '',
         };
     }
 
@@ -56,19 +52,16 @@ class AddService extends React.Component {
             .then( () => {
                 this.setState( {
                     isOpen: false,
-                    snackbarOpen: true,
-                    snackbarText: 'Account added',
                 } );
+
+                window.snackbarText = 'Account added';
+                window.dispatchEvent( new Event( 'open-snackbar' ) );
 
                 window.dispatchEvent( new Event( 'data-update' ) );
             } )
             .catch( ( postError ) => {
-                console.error( postError );
-
-                this.setState( {
-                    snackbarOpen: true,
-                    snackbarText: 'Failed to add account',
-                } );
+                window.snackbarText = postError.message;
+                window.dispatchEvent( new Event( 'open-snackbar' ) );
             } );
     }
 
@@ -84,12 +77,6 @@ class AddService extends React.Component {
         newState[ event.target.name ] = event.target.value;
 
         this.setState( newState );
-    }
-
-    handleSnackbarClose () {
-        this.setState( {
-            snackbarOpen: false,
-        } );
     }
 
     getContent () {
@@ -170,12 +157,6 @@ class AddService extends React.Component {
                 style = { styles.addAccountWrapper }
             >
                 { this.getContent() }
-                <Snackbar
-                    autoHideDuration = { 4000 }
-                    message = { this.state.snackbarText }
-                    onRequestClose = { this.handleSnackbarClose }
-                    open = { this.state.snackbarOpen }
-                />
             </div>
         );
     }

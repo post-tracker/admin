@@ -8,7 +8,6 @@ import TextField from 'material-ui/TextField';
 import IconButton from 'material-ui/IconButton';
 import ActionDelete from 'material-ui/svg-icons/action/delete';
 import ContentSave from 'material-ui/svg-icons/content/save';
-import Snackbar from 'material-ui/Snackbar';
 import AutoComplete from 'material-ui/AutoComplete';
 
 import api from './api.js';
@@ -31,7 +30,6 @@ class DeveloperField extends React.Component {
         this.handleValueChange = this.handleValueChange.bind( this );
         this.handleDelete = this.handleDelete.bind( this );
         this.handleSave = this.handleSave.bind( this );
-        this.handleSnackbarClose = this.handleSnackbarClose.bind( this );
         this.getInputField = this.getInputField.bind( this );
         this.handleDeleteClick = this.handleDeleteClick.bind( this );
         this.handleCancelClick = this.handleCancelClick.bind( this );
@@ -39,8 +37,6 @@ class DeveloperField extends React.Component {
         this.state = {
             confirmOpen: false,
             newValue: false,
-            snackbarOpen: false,
-            snackbarText: '',
         };
     }
 
@@ -65,17 +61,18 @@ class DeveloperField extends React.Component {
             .then( () => {
                 this.setState( {
                     confirmOpen: false,
-                    snackbarOpen: true,
-                    snackbarText: 'Property deleted',
                 } );
+
+                window.snackbarText = 'Property deleted';
+                window.dispatchEvent( new Event( 'open-snackbar' ) );
 
                 window.dispatchEvent( new Event( 'data-update' ) );
             } )
             .catch( ( error ) => {
+                window.snackbarText = error.message;
+                window.dispatchEvent( new Event( 'open-snackbar' ) );
                 this.setState( {
                     confirmOpen: false,
-                    snackbarOpen: true,
-                    snackbarText: error.message,
                 } );
             } );
     }
@@ -89,24 +86,17 @@ class DeveloperField extends React.Component {
             .then( () => {
                 this.setState( {
                     newValue: false,
-                    snackbarOpen: true,
-                    snackbarText: 'Property updated',
                 } );
+
+                window.snackbarText = 'Property updated';
+                window.dispatchEvent( new Event( 'open-snackbar' ) );
 
                 window.dispatchEvent( new Event( 'data-update' ) );
             } )
             .catch( ( error ) => {
-                this.setState( {
-                    snackbarOpen: true,
-                    snackbarText: error.message,
-                } );
+                window.snackbarText = error.message;
+                window.dispatchEvent( new Event( 'open-snackbar' ) );
             } );
-    }
-
-    handleSnackbarClose () {
-        this.setState( {
-            snackbarOpen: false,
-        } );
     }
 
     handleDeleteClick () {
@@ -214,12 +204,6 @@ class DeveloperField extends React.Component {
                 </Dialog>
                 <Divider
                     key = { `${ this.props.name }-${ this.props.value }-divider` }
-                />
-                <Snackbar
-                    autoHideDuration = { 4000 }
-                    message = { this.state.snackbarText }
-                    onRequestClose = { this.handleSnackbarClose }
-                    open = { this.state.snackbarOpen }
                 />
             </div>
         );

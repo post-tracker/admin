@@ -7,6 +7,7 @@ import Drawer from 'material-ui/Drawer';
 import FloatingActionButton from 'material-ui/FloatingActionButton';
 import MenuItem from 'material-ui/MenuItem';
 import NavigationMenu from 'material-ui/svg-icons/navigation/menu';
+import Snackbar from 'material-ui/Snackbar';
 
 import Developer from './Developer.jsx';
 import AddDeveloper from './AddDeveloper.jsx';
@@ -47,6 +48,8 @@ class Games extends React.Component {
         this.getGameData = this.getGameData.bind( this );
         this.handleToggleMenu = this.handleToggleMenu.bind( this );
         this.getCurrentGameName = this.getCurrentGameName.bind( this );
+        this.handleSnackbarClose = this.handleSnackbarClose.bind( this );
+        this.openSnackbar = this.openSnackbar.bind( this );
 
         this.state = {
             developers: {},
@@ -54,6 +57,8 @@ class Games extends React.Component {
             games: [],
             showCreate: false,
             showMenu: false,
+            snackbarOpen: false,
+            snackbarText: '',
         };
     }
 
@@ -63,6 +68,8 @@ class Games extends React.Component {
 
     componentDidMount () {
         window.addEventListener( 'data-update', this.getGameData );
+
+        window.addEventListener( 'open-snackbar', this.openSnackbar );
     }
 
     shouldComponentUpdate ( nextProps, nextState ) {
@@ -79,6 +86,13 @@ class Games extends React.Component {
 
     componentWillUnmount () {
         window.removeEventListener( 'data-update', this.getGameData );
+        window.removeEventListener( 'open-snackbar', this.openSnackbar );
+    }
+
+    handleSnackbarClose () {
+        this.setState( {
+            snackbarOpen: false,
+        } );
     }
 
     handleToggleMenu ( event ) {
@@ -86,6 +100,13 @@ class Games extends React.Component {
 
         this.setState( {
             showMenu: !this.state.showMenu,
+        } );
+    }
+
+    openSnackbar () {
+        this.setState( {
+            snackbarOpen: true,
+            snackbarText: window.snackbarText,
         } );
     }
 
@@ -284,6 +305,12 @@ class Games extends React.Component {
                         <NavigationMenu />
                     </FloatingActionButton>
                 </div>
+                <Snackbar
+                    autoHideDuration = { 4000 }
+                    message = { this.state.snackbarText }
+                    onRequestClose = { this.handleSnackbarClose }
+                    open = { this.state.snackbarOpen }
+                />
             </div>
         );
     }

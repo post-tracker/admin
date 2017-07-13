@@ -7,7 +7,6 @@ import Divider from 'material-ui/Divider';
 import FlatButton from 'material-ui/FlatButton';
 import FloatingActionButton from 'material-ui/FloatingActionButton';
 import TextField from 'material-ui/TextField';
-import Snackbar from 'material-ui/Snackbar';
 
 import api from './api.js';
 
@@ -26,7 +25,6 @@ class AddDeveloper extends React.Component {
         this.handleShowCreate = this.handleShowCreate.bind( this );
         this.handleInputChange = this.handleInputChange.bind( this );
         this.handleSaveDeveloper = this.handleSaveDeveloper.bind( this );
-        this.handleSnackbarClose = this.handleSnackbarClose.bind( this );
 
         this.state = {
             group: false,
@@ -34,8 +32,6 @@ class AddDeveloper extends React.Component {
             nick: false,
             role: false,
             showCreate: false,
-            snackbarOpen: false,
-            snackbarText: '',
         };
     }
 
@@ -64,17 +60,16 @@ class AddDeveloper extends React.Component {
             .then( () => {
                 this.setState( {
                     showCreate: false,
-                    snackbarOpen: true,
-                    snackbarText: 'Developer added',
                 } );
+
+                window.snackbarText = 'Developer added';
+                window.dispatchEvent( new Event( 'open-snackbar' ) );
 
                 window.dispatchEvent( new Event( 'data-update' ) );
             } )
             .catch( ( saveError ) => {
-                this.setState( {
-                    snackbarOpen: true,
-                    snackbarText: saveError.message,
-                } );
+                window.snackbarText = saveError.message;
+                window.dispatchEvent( new Event( 'open-snackbar' ) );
             } );
     }
 
@@ -89,12 +84,6 @@ class AddDeveloper extends React.Component {
     handleShowCreate () {
         this.setState( {
             showCreate: !this.state.showCreate,
-        } );
-    }
-
-    handleSnackbarClose () {
-        this.setState( {
-            snackbarOpen: false,
         } );
     }
 
@@ -123,12 +112,6 @@ class AddDeveloper extends React.Component {
                 >
                     <ContentAdd />
                 </FloatingActionButton>
-                <Snackbar
-                    autoHideDuration = { 4000 }
-                    message = { this.state.snackbarText }
-                    onRequestClose = { this.handleSnackbarClose }
-                    open = { this.state.snackbarOpen }
-                />
                 <Dialog
                     actions = { actions }
                     autoScrollBodyContent
