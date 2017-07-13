@@ -131,6 +131,7 @@ class AddDeveloper extends React.Component {
                 />
                 <Dialog
                     actions = { actions }
+                    autoScrollBodyContent
                     modal = { false }
                     onRequestClose = { this.handleClose }
                     open = { this.state.showCreate }
