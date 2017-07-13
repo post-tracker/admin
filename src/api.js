@@ -1,7 +1,6 @@
 import https from 'https';
 import querystring from 'querystring';
 
-// const API_HOSTNAME = 'localhost';
 // const API_HOSTNAME = 'lvh.me';
 // const API_PORT = 3000;
 const API_HOSTNAME = 'api.kokarn.com';
