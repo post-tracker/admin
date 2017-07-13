@@ -46,8 +46,10 @@ class Games extends React.Component {
 
         this.selectGame = this.selectGame.bind( this );
         this.getGameData = this.getGameData.bind( this );
+        this.getGamesData = this.getGamesData.bind( this );
         this.handleToggleMenu = this.handleToggleMenu.bind( this );
         this.getCurrentGameName = this.getCurrentGameName.bind( this );
+        this.handleSelectGame = this.handleSelectGame.bind( this );
         this.handleSnackbarClose = this.handleSnackbarClose.bind( this );
         this.openSnackbar = this.openSnackbar.bind( this );
 
@@ -103,11 +105,29 @@ class Games extends React.Component {
         } );
     }
 
+    handleSelectGame ( event ) {
+        const newGame = this.getAttributeRecursive( 'data-value', event.target );
+
+        if ( newGame ) {
+            this.selectGame( newGame );
+        }
+    }
+
     openSnackbar () {
         this.setState( {
             snackbarOpen: true,
             snackbarText: window.snackbarText,
         } );
+    }
+
+    getAttributeRecursive ( attribute, element ) {
+        const value = element.getAttribute( attribute );
+
+        if ( value === null && element.parentElement ) {
+            return this.getAttributeRecursive( attribute, element.parentElement );
+        }
+
+        return value;
     }
 
     getCurrentGameName () {
@@ -209,12 +229,11 @@ class Games extends React.Component {
 
             return (
                 <MenuItem
+                    data-value = { game.identifier }
                     key = { game.identifier }
-                    // eslint-disable-next-line react/jsx-no-bind
-                    onTouchTap = { this.selectGame.bind( this, game.identifier ) }
+                    onTouchTap = { this.handleSelectGame }
                     primaryText = { game.name }
                     style = { itemStyles }
-                    value = { game.identifier }
                 />
             );
         } );
