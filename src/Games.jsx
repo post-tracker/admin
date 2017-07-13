@@ -26,6 +26,7 @@ const styles = {
         bottom: 20,
         position: 'fixed',
         right: 20,
+        zIndex: 1,
     },
     wrapper: {
         alignItems: 'center',
@@ -80,7 +81,9 @@ class Games extends React.Component {
         window.removeEventListener( 'data-update', this.getGameData );
     }
 
-    handleToggleMenu () {
+    handleToggleMenu ( event ) {
+        event.preventDefault();
+
         this.setState( {
             showMenu: !this.state.showMenu,
         } );
