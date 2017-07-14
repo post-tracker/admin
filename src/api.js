@@ -1,10 +1,15 @@
 import https from 'https';
 import querystring from 'querystring';
 
-// const API_HOSTNAME = 'lvh.me';
-// const API_PORT = 3000;
-const API_HOSTNAME = 'api.kokarn.com';
-const API_PORT = 443;
+let API_HOSTNAME = 'api.kokarn.com';
+let API_PORT = 443;
+
+if ( window.location.hostname === 'localhost' ) {
+    API_HOSTNAME = 'lvh.me';
+    // eslint-disable-next-line no-magic-numbers
+    API_PORT = 3000;
+}
+
 const SUCESS_STATUS_CODE = 200;
 
 const get = function get ( requestPath, queryParams ) {
