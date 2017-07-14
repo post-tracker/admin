@@ -33,10 +33,11 @@ class Developer extends React.Component {
             return (
                 <DeveloperField
                     delete
+                    displayName = { account.service }
                     gameId = { this.props.gameId }
                     id = { account.id }
                     key = { `developer-field-${ account.service }-${ account.identifier }` }
-                    name = { account.service }
+                    name = { 'identifier' }
                     type = { 'accounts' }
                     value = { account.identifier }
                 />
