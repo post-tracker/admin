@@ -20,7 +20,7 @@ const styles = {
     },
 };
 
-class Developer extends React.Component {
+class Developer extends React.PureComponent {
     constructor ( props ) {
         super( props );
 
