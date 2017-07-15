@@ -203,6 +203,10 @@ class Games extends React.Component {
                     }
                 }
 
+                games.data.sort( ( a, b ) => {
+                    return a.identifier.localeCompare( b.identifier );
+                } );
+
                 this.setState( {
                     gameId: currentGame.identifier,
                     gameNumber: currentGame.id,
