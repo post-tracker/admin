@@ -163,7 +163,11 @@ class Games extends React.Component {
                 }
 
                 developers.data.sort( ( a, b ) => {
-                    return a.nick.localeCompare( b.nick );
+                    if ( a.nick && b.nick ) {
+                        return a.nick.localeCompare( b.nick );
+                    }
+
+                    return 1;
                 } );
 
                 this.setState( {
