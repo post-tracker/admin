@@ -65,7 +65,7 @@ class Developer extends React.PureComponent {
                 zDepth = { 1 }
             >
                 <h3>
-                    { `${ this.props.nick } - ${ this.props.id }` }
+                    { `${ this.props.nick || this.props.name } - ${ this.props.id }` }
                     <div
                         style = { styles.activeWrapper }
                     >
