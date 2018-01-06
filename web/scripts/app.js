@@ -21115,6 +21115,10 @@ var _alphanumSort = __webpack_require__(212);
 
 var _alphanumSort2 = _interopRequireDefault(_alphanumSort);
 
+var _Divider = __webpack_require__(74);
+
+var _Divider2 = _interopRequireDefault(_Divider);
+
 var _Drawer = __webpack_require__(318);
 
 var _Drawer2 = _interopRequireDefault(_Drawer);
@@ -21142,6 +21146,10 @@ var _Developer2 = _interopRequireDefault(_Developer);
 var _AddDeveloper = __webpack_require__(213);
 
 var _AddDeveloper2 = _interopRequireDefault(_AddDeveloper);
+
+var _AddGame = __webpack_require__(487);
+
+var _AddGame2 = _interopRequireDefault(_AddGame);
 
 var _api = __webpack_require__(61);
 
@@ -21222,7 +21230,7 @@ var Games = function (_React$Component) {
         key: 'componentDidMount',
         value: function componentDidMount() {
             window.addEventListener('data-update', this.getGameData);
-
+            window.addEventListener('games-update', this.getGamesData);
             window.addEventListener('open-snackbar', this.openSnackbar);
         }
     }, {
@@ -21242,6 +21250,7 @@ var Games = function (_React$Component) {
         key: 'componentWillUnmount',
         value: function componentWillUnmount() {
             window.removeEventListener('data-update', this.getGameData);
+            window.removeEventListener('games-update', this.getGamesData);
             window.removeEventListener('open-snackbar', this.openSnackbar);
         }
     }, {
@@ -21393,7 +21402,7 @@ var Games = function (_React$Component) {
         value: function getGames() {
             var _this4 = this;
 
-            return this.state.games.map(function (game) {
+            var gameNodes = this.state.games.map(function (game) {
                 var itemStyles = {};
 
                 if (game.identifier === _this4.state.gameId) {
@@ -21408,6 +21417,11 @@ var Games = function (_React$Component) {
                     style: itemStyles
                 });
             });
+
+            gameNodes.push(_react2.default.createElement(_Divider2.default, null));
+            gameNodes.push(_react2.default.createElement(_AddGame2.default, null));
+
+            return gameNodes;
         }
     }, {
         key: 'getDevelopers',
@@ -54965,6 +54979,207 @@ function extend() {
 /***/ (function(module, exports) {
 
 /* (ignored) */
+
+/***/ }),
+/* 487 */
+/***/ (function(module, exports, __webpack_require__) {
+
+"use strict";
+
+
+Object.defineProperty(exports, "__esModule", {
+    value: true
+});
+
+var _createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }();
+
+var _react = __webpack_require__(1);
+
+var _react2 = _interopRequireDefault(_react);
+
+var _add = __webpack_require__(164);
+
+var _add2 = _interopRequireDefault(_add);
+
+var _Dialog = __webpack_require__(153);
+
+var _Dialog2 = _interopRequireDefault(_Dialog);
+
+var _Divider = __webpack_require__(74);
+
+var _Divider2 = _interopRequireDefault(_Divider);
+
+var _FlatButton = __webpack_require__(102);
+
+var _FlatButton2 = _interopRequireDefault(_FlatButton);
+
+var _MenuItem = __webpack_require__(104);
+
+var _MenuItem2 = _interopRequireDefault(_MenuItem);
+
+var _TextField = __webpack_require__(75);
+
+var _TextField2 = _interopRequireDefault(_TextField);
+
+var _api = __webpack_require__(61);
+
+var _api2 = _interopRequireDefault(_api);
+
+function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
+
+function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
+
+function _possibleConstructorReturn(self, call) { if (!self) { throw new ReferenceError("this hasn't been initialised - super() hasn't been called"); } return call && (typeof call === "object" || typeof call === "function") ? call : self; }
+
+function _inherits(subClass, superClass) { if (typeof superClass !== "function" && superClass !== null) { throw new TypeError("Super expression must either be null or a function, not " + typeof superClass); } subClass.prototype = Object.create(superClass && superClass.prototype, { constructor: { value: subClass, enumerable: false, writable: true, configurable: true } }); if (superClass) Object.setPrototypeOf ? Object.setPrototypeOf(subClass, superClass) : subClass.__proto__ = superClass; }
+
+var AddGame = function (_React$Component) {
+    _inherits(AddGame, _React$Component);
+
+    function AddGame(props) {
+        _classCallCheck(this, AddGame);
+
+        var _this = _possibleConstructorReturn(this, (AddGame.__proto__ || Object.getPrototypeOf(AddGame)).call(this, props));
+
+        _this.handleShowCreate = _this.handleShowCreate.bind(_this);
+        _this.handleInputChange = _this.handleInputChange.bind(_this);
+        _this.handleSaveGame = _this.handleSaveGame.bind(_this);
+
+        _this.state = {
+            hostname: false,
+            identifier: false,
+            name: false,
+            shortName: false,
+            showCreate: false
+        };
+        return _this;
+    }
+
+    _createClass(AddGame, [{
+        key: 'handleSaveGame',
+        value: function handleSaveGame() {
+            var _this2 = this;
+
+            var newGame = {
+                hostname: this.state.hostname,
+                identifier: this.state.identifier,
+                name: this.state.name,
+                shortName: this.state.shortName || this.state.name
+            };
+
+            _api2.default.post('/games', newGame).then(function () {
+                _this2.setState({
+                    hostname: false,
+                    identifier: false,
+                    name: false,
+                    shortName: false,
+                    showCreate: false
+                });
+
+                window.snackbarText = 'Game added';
+                window.dispatchEvent(new Event('open-snackbar'));
+                window.dispatchEvent(new Event('games-update'));
+            }).catch(function (saveError) {
+                window.snackbarText = saveError.message;
+                window.dispatchEvent(new Event('open-snackbar'));
+            });
+        }
+    }, {
+        key: 'handleInputChange',
+        value: function handleInputChange(event) {
+            var newState = {};
+
+            newState[event.target.name] = event.target.value;
+
+            this.setState(newState);
+        }
+    }, {
+        key: 'handleShowCreate',
+        value: function handleShowCreate() {
+            this.setState({
+                showCreate: !this.state.showCreate
+            });
+        }
+    }, {
+        key: 'render',
+        value: function render() {
+            var actions = [_react2.default.createElement(_FlatButton2.default, {
+                key: 'cancel-button',
+                label: 'Cancel',
+                onTouchTap: this.handleShowCreate,
+                secondary: true
+            }), _react2.default.createElement(_FlatButton2.default, {
+                'default': true,
+                key: 'confirm-button',
+                keyboardFocused: true,
+                label: 'Submit',
+                onTouchTap: this.handleSaveGame
+            })];
+
+            return _react2.default.createElement(
+                _MenuItem2.default,
+                {
+                    key: 'add-game',
+                    onTouchTap: this.handleShowCreate,
+                    primaryText: 'Add game',
+                    rightIcon: _react2.default.createElement(_add2.default, null)
+                },
+                _react2.default.createElement(
+                    _Dialog2.default,
+                    {
+                        actions: actions,
+                        autoScrollBodyContent: true,
+                        modal: false,
+                        onRequestClose: this.handleClose,
+                        open: this.state.showCreate,
+                        title: 'Create game'
+                    },
+                    _react2.default.createElement(_TextField2.default, {
+                        floatingLabelText: 'Name',
+                        fullWidth: true,
+                        hintText: 'Name',
+                        name: 'name',
+                        onKeyUp: this.handleInputChange,
+                        underlineShow: false
+                    }),
+                    _react2.default.createElement(_Divider2.default, null),
+                    _react2.default.createElement(_TextField2.default, {
+                        floatingLabelText: 'Short name',
+                        fullWidth: true,
+                        hintText: 'Short name',
+                        name: 'shortName',
+                        onKeyUp: this.handleInputChange,
+                        underlineShow: false
+                    }),
+                    _react2.default.createElement(_Divider2.default, null),
+                    _react2.default.createElement(_TextField2.default, {
+                        floatingLabelText: 'Identifier',
+                        fullWidth: true,
+                        hintText: 'Identifier',
+                        name: 'identifier',
+                        onKeyUp: this.handleInputChange,
+                        underlineShow: false
+                    }),
+                    _react2.default.createElement(_Divider2.default, null),
+                    _react2.default.createElement(_TextField2.default, {
+                        floatingLabelText: 'Hostname',
+                        fullWidth: true,
+                        hintText: 'Hostname',
+                        name: 'hostname',
+                        onKeyUp: this.handleInputChange,
+                        underlineShow: false
+                    })
+                )
+            );
+        }
+    }]);
+
+    return AddGame;
+}(_react2.default.Component);
+
+AddGame.displayName = 'AddGame';
+
+exports.default = AddGame;
 
 /***/ })
 /******/ ]);

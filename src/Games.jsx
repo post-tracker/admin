@@ -3,6 +3,7 @@ import deepEqual from 'deep-equal';
 import cookie from 'react-cookies';
 import alphanumSort from 'alphanum-sort';
 
+import Divider from 'material-ui/Divider';
 import Drawer from 'material-ui/Drawer';
 import FloatingActionButton from 'material-ui/FloatingActionButton';
 import MenuItem from 'material-ui/MenuItem';
@@ -11,6 +12,7 @@ import Snackbar from 'material-ui/Snackbar';
 
 import Developer from './Developer.jsx';
 import AddDeveloper from './AddDeveloper.jsx';
+import AddGame from './AddGame.jsx';
 import api from './api.js';
 
 const INIT_LOAD_WAIT_TIMEOUT = 100;
@@ -70,7 +72,7 @@ class Games extends React.Component {
 
     componentDidMount () {
         window.addEventListener( 'data-update', this.getGameData );
-
+        window.addEventListener( 'games-update', this.getGamesData );
         window.addEventListener( 'open-snackbar', this.openSnackbar );
     }
 
@@ -88,6 +90,7 @@ class Games extends React.Component {
 
     componentWillUnmount () {
         window.removeEventListener( 'data-update', this.getGameData );
+        window.removeEventListener( 'games-update', this.getGamesData );
         window.removeEventListener( 'open-snackbar', this.openSnackbar );
     }
 
@@ -228,7 +231,7 @@ class Games extends React.Component {
     }
 
     getGames () {
-        return this.state.games.map( ( game ) => {
+        let gameNodes = this.state.games.map( ( game ) => {
             let itemStyles = {};
 
             if ( game.identifier === this.state.gameId ) {
@@ -245,6 +248,11 @@ class Games extends React.Component {
                 />
             );
         } );
+
+        gameNodes.push( <Divider /> );
+        gameNodes.push( <AddGame /> );
+
+        return gameNodes;
     }
 
     getDevelopers () {
