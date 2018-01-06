@@ -59,6 +59,10 @@ class AddDeveloper extends React.Component {
         api.post( `/${ this.props.gameId }/developers`, newPost )
             .then( () => {
                 this.setState( {
+                    group: false,
+                    name: false,
+                    nick: false,
+                    role: false,
                     showCreate: false,
                 } );
 
