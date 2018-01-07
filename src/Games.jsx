@@ -8,9 +8,11 @@ import Drawer from 'material-ui/Drawer';
 import FloatingActionButton from 'material-ui/FloatingActionButton';
 import MenuItem from 'material-ui/MenuItem';
 import NavigationMenu from 'material-ui/svg-icons/navigation/menu';
+import Paper from 'material-ui/Paper';
 import Snackbar from 'material-ui/Snackbar';
 
 import Developer from './Developer.jsx';
+import GameInfo from './GameInfo.jsx';
 import AddDeveloper from './AddDeveloper.jsx';
 import AddGame from './AddGame.jsx';
 import api from './api.js';
@@ -21,8 +23,19 @@ const styles = {
     activeMenuItem: {
         color: 'red',
     },
+    gameImage: {
+        height: '100px',
+    },
+    gameImageWrapper: {
+        left: 0,
+        position: 'absolute',
+        top: '50%',
+        transform: 'translateY( -50% )',
+    },
     gameTitle: {
         fontSize: '4vw',
+        margin: '1em 40px',
+        position: 'relative',
         textAlign: 'center',
     },
     toggleMenuButton: {
@@ -50,7 +63,7 @@ class Games extends React.Component {
         this.getGameData = this.getGameData.bind( this );
         this.getGamesData = this.getGamesData.bind( this );
         this.handleToggleMenu = this.handleToggleMenu.bind( this );
-        this.getCurrentGameName = this.getCurrentGameName.bind( this );
+        this.getCurrentGame = this.getCurrentGame.bind( this );
         this.handleSelectGame = this.handleSelectGame.bind( this );
         this.handleSnackbarClose = this.handleSnackbarClose.bind( this );
         this.openSnackbar = this.openSnackbar.bind( this );
@@ -133,10 +146,10 @@ class Games extends React.Component {
         return value;
     }
 
-    getCurrentGameName () {
+    getCurrentGame () {
         for ( let i = 0; i < this.state.games.length; i = i + 1 ) {
             if ( this.state.games[ i ].identifier === this.state.gameId ) {
-                return this.state.games[ i ].name;
+                return this.state.games[ i ];
             }
         }
 
@@ -231,7 +244,7 @@ class Games extends React.Component {
     }
 
     getGames () {
-        let gameNodes = this.state.games.map( ( game ) => {
+        const gameNodes = this.state.games.map( ( game ) => {
             let itemStyles = {};
 
             if ( game.identifier === this.state.gameId ) {
@@ -326,8 +339,25 @@ class Games extends React.Component {
                 <h1
                     style = { styles.gameTitle }
                 >
-                    { this.getCurrentGameName() }
+                    { this.getCurrentGame().name }
+                    { this.state.gameId && this.getCurrentGame().config && this.getCurrentGame().config.boxart &&
+                        <Paper
+                            rounded = { false }
+                            style = { styles.gameImageWrapper }
+                            zDepth = { 1 }
+                        >
+                            <img
+                                src = { this.getCurrentGame().config.boxart }
+                                style = { styles.gameImage }
+                            />
+                        </Paper>
+                    }
                 </h1>
+                { this.state.gameId &&
+                    <GameInfo
+                        { ...this.getCurrentGame() }
+                    />
+                }
                 <div
                     style = { styles.wrapper }
                 >
