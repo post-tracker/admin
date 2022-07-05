@@ -7,15 +7,16 @@
     "test": "echo \"Error: no test specified\" && exit 1",
     "pretest": "eslint *.js",
     "dev": "webpack --progress --colors --watch",
-    "bundle": "cross-env NODE_ENV=production webpack -p --progress --colors",
+    "bundle": "NODE_ENV=production webpack -p --progress --colors",
     "start": "node server.js",
-    "dev:server": "cross-env ACCESS_USERNAME=test ACCESS_PASSWORD=test API_TOKEN=test node server.js"
+    "dev:server": "node server.js"
   },
   "keywords": [],
   "author": "",
   "license": "ISC",
   "dependencies": {
     "cookie-parser": "^1.4.3",
+    "dotenv": "^16.0.1",
     "express": "^4.15.3",
     "express-basic-auth": "^1.1.1"
   },
@@ -26,7 +27,6 @@
     "babel-plugin-transform-object-rest-spread": "^6.23.0",
     "babel-preset-env": "^1.4.0",
     "babel-preset-react": "^6.24.1",
-    "cross-env": "^7.0.3",
     "deep-equal": "^1.0.1",
     "eslint": "^4.1.1",
     "eslint-config-kokarn": "^3.0.2",
