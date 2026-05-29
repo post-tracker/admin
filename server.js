@@ -30,16 +30,6 @@ const getUnauthorizedResponse = function getUnauthorizedResponse ( request ) {
 };
 
 app.use( cookieParser() );
-app.use( basicAuth( {
-    challenge: true,
-    unauthorizedResponse: getUnauthorizedResponse,
-    users: users,
-} ), ( request, response, next ) => {
-    response.cookie( 'request-user', request.auth.user );
-    response.cookie( 'request-password', request.auth.password );
-
-    next();
-} );
 app.use( express.static( path.join( __dirname, 'web' ) ) );
 
 app.get( '/api-token', ( request, response ) => {
