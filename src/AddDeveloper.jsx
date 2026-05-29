@@ -26,12 +26,29 @@ class AddDeveloper extends React.Component {
         this.handleInputChange = this.handleInputChange.bind( this );
         this.handleSaveDeveloper = this.handleSaveDeveloper.bind( this );
 
-        this.state = {
+        this.state = this.buildInitialState( props );
+    }
+
+    componentWillReceiveProps ( nextProps ) {
+        if (
+            nextProps.prefillName !== this.props.prefillName
+            || nextProps.prefillService !== this.props.prefillService
+            || nextProps.prefillIdentifier !== this.props.prefillIdentifier
+            || nextProps.openOnMount !== this.props.openOnMount
+        ) {
+            this.setState( this.buildInitialState( nextProps ) );
+        }
+    }
+
+    buildInitialState ( props ) {
+        return {
             group: false,
-            name: false,
-            nick: false,
+            identifier: props.prefillIdentifier || false,
+            name: props.prefillName || false,
+            nick: props.prefillName || false,
             role: false,
-            showCreate: false,
+            service: props.prefillService || false,
+            showCreate: Boolean( props.openOnMount ),
         };
     }
 
@@ -56,13 +73,39 @@ class AddDeveloper extends React.Component {
             newPost.role = this.state.role;
         }
 
+        const wantsAccount = this.state.service && this.state.identifier;
+
         api.post( `/${ this.props.gameId }/developers`, newPost )
+            .then( () => {
+                if ( !wantsAccount ) {
+                    return false;
+                }
+
+                return api.get( `/${ this.props.gameId }/developers` )
+                    .then( ( developers ) => {
+                        const match = developers.data.find( ( developer ) => {
+                            return developer.nick === newPost.nick;
+                        } );
+
+                        if ( !match ) {
+                            throw new Error( 'Developer not found after create' );
+                        }
+
+                        return api.post( `/${ this.props.gameId }/accounts`, {
+                            developerId: match.id,
+                            identifier: this.state.identifier,
+                            service: this.state.service,
+                        } );
+                    } );
+            } )
             .then( () => {
                 this.setState( {
                     group: false,
+                    identifier: false,
                     name: false,
                     nick: false,
                     role: false,
+                    service: false,
                     showCreate: false,
                 } );
 
@@ -70,6 +113,10 @@ class AddDeveloper extends React.Component {
                 window.dispatchEvent( new Event( 'open-snackbar' ) );
 
                 window.dispatchEvent( new Event( 'data-update' ) );
+
+                if ( this.props.onSaved ) {
+                    this.props.onSaved();
+                }
             } )
             .catch( ( saveError ) => {
                 window.snackbarText = saveError.message;
@@ -125,6 +172,7 @@ class AddDeveloper extends React.Component {
                     title = { `Create developer - ${ this.props.gameId }` }
                 >
                     <TextField
+                        defaultValue = { this.state.name || '' }
                         floatingLabelText = { 'Name' }
                         fullWidth
                         hintText = { 'Name' }
@@ -134,6 +182,7 @@ class AddDeveloper extends React.Component {
                     />
                     <Divider />
                     <TextField
+                        defaultValue = { this.state.nick || '' }
                         floatingLabelText = { 'Nick' }
                         fullWidth
                         hintText = { 'Nick' }
@@ -159,6 +208,28 @@ class AddDeveloper extends React.Component {
                         onKeyUp = { this.handleInputChange }
                         underlineShow = { false }
                     />
+                    { this.state.service && this.state.identifier &&
+                        <div>
+                            <Divider />
+                            <TextField
+                                defaultValue = { this.state.service }
+                                disabled
+                                floatingLabelText = { 'Account service' }
+                                fullWidth
+                                name = { 'service' }
+                                underlineShow = { false }
+                            />
+                            <Divider />
+                            <TextField
+                                defaultValue = { this.state.identifier }
+                                disabled
+                                floatingLabelText = { 'Account identifier' }
+                                fullWidth
+                                name = { 'identifier' }
+                                underlineShow = { false }
+                            />
+                        </div>
+                    }
                 </Dialog>
             </div>
         );
@@ -167,9 +238,22 @@ class AddDeveloper extends React.Component {
 
 AddDeveloper.displayName = 'AddDeveloper';
 
+AddDeveloper.defaultProps = {
+    onSaved: false,
+    openOnMount: false,
+    prefillIdentifier: false,
+    prefillName: false,
+    prefillService: false,
+};
+
 AddDeveloper.propTypes = {
     gameId: PropTypes.string.isRequired,
     gameNumber: PropTypes.number.isRequired,
+    onSaved: PropTypes.oneOfType( [ PropTypes.func, PropTypes.bool ] ),
+    openOnMount: PropTypes.bool,
+    prefillIdentifier: PropTypes.oneOfType( [ PropTypes.string, PropTypes.bool ] ),
+    prefillName: PropTypes.oneOfType( [ PropTypes.string, PropTypes.bool ] ),
+    prefillService: PropTypes.oneOfType( [ PropTypes.string, PropTypes.bool ] ),
 };
 
 export default AddDeveloper;

@@ -68,10 +68,13 @@ class Games extends React.Component {
         this.handleSnackbarClose = this.handleSnackbarClose.bind( this );
         this.openSnackbar = this.openSnackbar.bind( this );
 
+        this.handleAddDevSaved = this.handleAddDevSaved.bind( this );
+
         this.state = {
             developers: {},
             gameId: false,
             games: [],
+            prefill: this.readPrefillFromUrl(),
             showCreate: false,
             showMenu: false,
             snackbarOpen: false,
@@ -81,6 +84,43 @@ class Games extends React.Component {
 
     componentWillMount () {
         this.getGamesData();
+    }
+
+    readPrefillFromUrl () {
+        if ( typeof window === 'undefined' || !window.location ) {
+            return false;
+        }
+
+        const params = new URLSearchParams( window.location.search );
+
+        if ( params.get( 'action' ) !== 'add-dev' ) {
+            return false;
+        }
+
+        const game = params.get( 'game' );
+        const service = params.get( 'service' );
+        const identifier = params.get( 'identifier' );
+
+        if ( !game || !service || !identifier ) {
+            return false;
+        }
+
+        return {
+            game: game,
+            identifier: identifier,
+            name: params.get( 'name' ) || identifier,
+            service: service,
+        };
+    }
+
+    handleAddDevSaved () {
+        this.setState( {
+            prefill: false,
+        } );
+
+        if ( window.history && window.history.replaceState ) {
+            window.history.replaceState( {}, document.title, window.location.pathname );
+        }
     }
 
     componentDidMount () {
@@ -212,10 +252,11 @@ class Games extends React.Component {
         api.get( '/games' )
             .then( ( games ) => {
                 let currentGame = games.data[ 0 ];
+                const preferredGameId = ( this.state.prefill && this.state.prefill.game ) || cookie.load( 'gameId' );
 
-                if ( cookie.load( 'gameId' ) ) {
+                if ( preferredGameId ) {
                     for ( let i = 0; i < games.data.length; i = i + 1 ) {
-                        if ( games.data[ i ].identifier === cookie.load( 'gameId' ) ) {
+                        if ( games.data[ i ].identifier === preferredGameId ) {
                             currentGame = games.data[ i ];
 
                             break;
@@ -318,10 +359,19 @@ class Games extends React.Component {
         let addNode = false;
 
         if ( this.state.gameId && this.state.gameNumber ) {
+            const prefillActive = Boolean(
+                this.state.prefill && this.state.prefill.game === this.state.gameId
+            );
+
             addNode = (
                 <AddDeveloper
                     gameId = { this.state.gameId }
                     gameNumber = { this.state.gameNumber }
+                    onSaved = { prefillActive ? this.handleAddDevSaved : false }
+                    openOnMount = { prefillActive }
+                    prefillIdentifier = { prefillActive ? this.state.prefill.identifier : false }
+                    prefillName = { prefillActive ? this.state.prefill.name : false }
+                    prefillService = { prefillActive ? this.state.prefill.service : false }
                 />
             );
         }
