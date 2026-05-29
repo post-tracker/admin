@@ -1,6 +1,7 @@
 import React from 'react';
 import PropTypes from 'prop-types';
 
+import AutoComplete from 'material-ui/AutoComplete';
 import ContentAdd from 'material-ui/svg-icons/content/add';
 import Dialog from 'material-ui/Dialog';
 import Divider from 'material-ui/Divider';
@@ -25,6 +26,8 @@ class AddDeveloper extends React.Component {
         this.handleShowCreate = this.handleShowCreate.bind( this );
         this.handleInputChange = this.handleInputChange.bind( this );
         this.handleSaveDeveloper = this.handleSaveDeveloper.bind( this );
+        this.handlePickExistingDeveloper = this.handlePickExistingDeveloper.bind( this );
+        this.handleExistingDeveloperInput = this.handleExistingDeveloperInput.bind( this );
 
         this.state = this.buildInitialState( props );
     }
@@ -37,11 +40,35 @@ class AddDeveloper extends React.Component {
             || nextProps.openOnMount !== this.props.openOnMount
         ) {
             this.setState( this.buildInitialState( nextProps ) );
+
+            return;
+        }
+
+        const developersChanged = nextProps.availableDevelopers !== this.props.availableDevelopers;
+        const haveNoMatchYet = !this.state.existingDeveloperId && this.state.existingDeveloperNick === '';
+
+        if ( developersChanged && haveNoMatchYet && nextProps.prefillName ) {
+            const autoMatch = this.findExistingDeveloperMatch( nextProps.prefillName, nextProps.availableDevelopers );
+
+            if ( autoMatch ) {
+                this.setState( {
+                    existingDeveloperId: autoMatch.id,
+                    existingDeveloperNick: autoMatch.nick,
+                } );
+            }
         }
     }
 
     buildInitialState ( props ) {
+        const autoMatch = this.findExistingDeveloperMatch( props.prefillName, props.availableDevelopers );
+
         return {
+            existingDeveloperId: autoMatch
+                ? autoMatch.id
+                : false,
+            existingDeveloperNick: autoMatch
+                ? autoMatch.nick
+                : '',
             group: false,
             identifier: props.prefillIdentifier || false,
             name: props.prefillName || false,
@@ -52,54 +79,127 @@ class AddDeveloper extends React.Component {
         };
     }
 
-    handleSaveDeveloper () {
-        const newPost = {
-            gameId: this.props.gameNumber,
-        };
-
-        if ( this.state.group ) {
-            newPost.group = this.state.group;
+    findExistingDeveloperMatch ( prefillName, availableDevelopers ) {
+        if ( !prefillName || !availableDevelopers || availableDevelopers.length === 0 ) {
+            return false;
         }
 
-        if ( this.state.name ) {
-            newPost.name = this.state.name;
+        const normalised = String( prefillName ).trim().toLowerCase();
+
+        if ( !normalised ) {
+            return false;
         }
 
-        if ( this.state.nick ) {
-            newPost.nick = this.state.nick;
-        }
+        return availableDevelopers.find( ( developer ) => {
+            const candidates = [ developer.nick, developer.name ];
 
-        if ( this.state.role ) {
-            newPost.role = this.state.role;
-        }
-
-        const wantsAccount = this.state.service && this.state.identifier;
-
-        api.post( `/${ this.props.gameId }/developers`, newPost )
-            .then( () => {
-                if ( !wantsAccount ) {
+            return candidates.some( ( candidate ) => {
+                if ( !candidate ) {
                     return false;
                 }
 
-                return api.get( `/${ this.props.gameId }/developers` )
-                    .then( ( developers ) => {
-                        const match = developers.data.find( ( developer ) => {
-                            return developer.nick === newPost.nick;
-                        } );
+                return String( candidate ).trim().toLowerCase() === normalised;
+            } );
+        } ) || false;
+    }
 
-                        if ( !match ) {
-                            throw new Error( 'Developer not found after create' );
-                        }
+    handlePickExistingDeveloper ( chosen ) {
+        const match = this.props.availableDevelopers.find( ( developer ) => {
+            return developer.nick === chosen;
+        } );
 
-                        return api.post( `/${ this.props.gameId }/accounts`, {
-                            developerId: match.id,
-                            identifier: this.state.identifier,
-                            service: this.state.service,
+        this.setState( {
+            existingDeveloperId: match
+                ? match.id
+                : false,
+            existingDeveloperNick: chosen,
+        } );
+    }
+
+    handleExistingDeveloperInput ( typed ) {
+        const match = this.props.availableDevelopers.find( ( developer ) => {
+            return developer.nick === typed;
+        } );
+
+        this.setState( {
+            existingDeveloperId: match
+                ? match.id
+                : false,
+            existingDeveloperNick: typed,
+        } );
+    }
+
+    handleSaveDeveloper () {
+        const wantsAccount = this.state.service && this.state.identifier;
+
+        let saveChain;
+
+        if ( this.state.existingDeveloperId ) {
+            if ( !wantsAccount ) {
+                window.snackbarText = 'Pick a service and identifier to attach to existing developer';
+                window.dispatchEvent( new Event( 'open-snackbar' ) );
+
+                return;
+            }
+
+            saveChain = api.post( `/${ this.props.gameId }/accounts`, {
+                developerId: this.state.existingDeveloperId,
+                identifier: this.state.identifier,
+                service: this.state.service,
+            } );
+        } else {
+            const newPost = {
+                gameId: this.props.gameNumber,
+            };
+
+            if ( this.state.group ) {
+                newPost.group = this.state.group;
+            }
+
+            if ( this.state.name ) {
+                newPost.name = this.state.name;
+            }
+
+            if ( this.state.nick ) {
+                newPost.nick = this.state.nick;
+            }
+
+            if ( this.state.role ) {
+                newPost.role = this.state.role;
+            }
+
+            saveChain = api.post( `/${ this.props.gameId }/developers`, newPost )
+                .then( () => {
+                    if ( !wantsAccount ) {
+                        return false;
+                    }
+
+                    return api.get( `/${ this.props.gameId }/developers` )
+                        .then( ( developers ) => {
+                            const match = developers.data.find( ( developer ) => {
+                                return developer.nick === newPost.nick;
+                            } );
+
+                            if ( !match ) {
+                                throw new Error( 'Developer not found after create' );
+                            }
+
+                            return api.post( `/${ this.props.gameId }/accounts`, {
+                                developerId: match.id,
+                                identifier: this.state.identifier,
+                                service: this.state.service,
+                            } );
                         } );
-                    } );
-            } )
+                } );
+        }
+
+        const wasAttachingToExisting = Boolean( this.state.existingDeveloperId );
+
+        saveChain
             .then( () => {
                 this.setState( {
+                    existingDeveloperId: false,
+                    existingDeveloperNick: '',
                     group: false,
                     identifier: false,
                     name: false,
@@ -109,7 +209,9 @@ class AddDeveloper extends React.Component {
                     showCreate: false,
                 } );
 
-                window.snackbarText = 'Developer added';
+                window.snackbarText = wasAttachingToExisting
+                    ? 'Account added'
+                    : 'Developer added';
                 window.dispatchEvent( new Event( 'open-snackbar' ) );
 
                 window.dispatchEvent( new Event( 'data-update' ) );
@@ -155,6 +257,12 @@ class AddDeveloper extends React.Component {
             />,
         ];
 
+        const developerNicks = this.props.availableDevelopers.map( ( developer ) => {
+            return developer.nick;
+        } );
+
+        const attachingToExisting = Boolean( this.state.existingDeveloperId );
+
         return (
             <div>
                 <FloatingActionButton
@@ -171,43 +279,63 @@ class AddDeveloper extends React.Component {
                     open = { this.state.showCreate }
                     title = { `Create developer - ${ this.props.gameId }` }
                 >
-                    <TextField
-                        defaultValue = { this.state.name || '' }
-                        floatingLabelText = { 'Name' }
-                        fullWidth
-                        hintText = { 'Name' }
-                        name = { 'name' }
-                        onKeyUp = { this.handleInputChange }
-                        underlineShow = { false }
-                    />
-                    <Divider />
-                    <TextField
-                        defaultValue = { this.state.nick || '' }
-                        floatingLabelText = { 'Nick' }
-                        fullWidth
-                        hintText = { 'Nick' }
-                        name = { 'nick' }
-                        onKeyUp = { this.handleInputChange }
-                        underlineShow = { false }
-                    />
-                    <Divider />
-                    <TextField
-                        floatingLabelText = { 'Group' }
-                        fullWidth
-                        hintText = { 'Group' }
-                        name = { 'group' }
-                        onKeyUp = { this.handleInputChange }
-                        underlineShow = { false }
-                    />
-                    <Divider />
-                    <TextField
-                        floatingLabelText = { 'Role' }
-                        fullWidth
-                        hintText = { 'Role' }
-                        name = { 'role' }
-                        onKeyUp = { this.handleInputChange }
-                        underlineShow = { false }
-                    />
+                    { developerNicks.length > 0 &&
+                        <div>
+                            <AutoComplete
+                                dataSource = { developerNicks }
+                                filter = { AutoComplete.caseInsensitiveFilter }
+                                floatingLabelText = { 'Attach to existing developer (leave blank to create new)' }
+                                fullWidth
+                                onNewRequest = { this.handlePickExistingDeveloper }
+                                onUpdateInput = { this.handleExistingDeveloperInput }
+                                openOnFocus
+                                searchText = { this.state.existingDeveloperNick }
+                                underlineShow = { false }
+                            />
+                            <Divider />
+                        </div>
+                    }
+                    { !attachingToExisting &&
+                        <div>
+                            <TextField
+                                defaultValue = { this.state.name || '' }
+                                floatingLabelText = { 'Name' }
+                                fullWidth
+                                hintText = { 'Name' }
+                                name = { 'name' }
+                                onKeyUp = { this.handleInputChange }
+                                underlineShow = { false }
+                            />
+                            <Divider />
+                            <TextField
+                                defaultValue = { this.state.nick || '' }
+                                floatingLabelText = { 'Nick' }
+                                fullWidth
+                                hintText = { 'Nick' }
+                                name = { 'nick' }
+                                onKeyUp = { this.handleInputChange }
+                                underlineShow = { false }
+                            />
+                            <Divider />
+                            <TextField
+                                floatingLabelText = { 'Group' }
+                                fullWidth
+                                hintText = { 'Group' }
+                                name = { 'group' }
+                                onKeyUp = { this.handleInputChange }
+                                underlineShow = { false }
+                            />
+                            <Divider />
+                            <TextField
+                                floatingLabelText = { 'Role' }
+                                fullWidth
+                                hintText = { 'Role' }
+                                name = { 'role' }
+                                onKeyUp = { this.handleInputChange }
+                                underlineShow = { false }
+                            />
+                        </div>
+                    }
                     { this.state.service && this.state.identifier &&
                         <div>
                             <Divider />
@@ -239,6 +367,7 @@ class AddDeveloper extends React.Component {
 AddDeveloper.displayName = 'AddDeveloper';
 
 AddDeveloper.defaultProps = {
+    availableDevelopers: [],
     onSaved: false,
     openOnMount: false,
     prefillIdentifier: false,
@@ -247,6 +376,10 @@ AddDeveloper.defaultProps = {
 };
 
 AddDeveloper.propTypes = {
+    availableDevelopers: PropTypes.arrayOf( PropTypes.shape( {
+        id: PropTypes.number.isRequired,
+        nick: PropTypes.string,
+    } ) ),
     gameId: PropTypes.string.isRequired,
     gameNumber: PropTypes.number.isRequired,
     onSaved: PropTypes.oneOfType( [ PropTypes.func, PropTypes.bool ] ),

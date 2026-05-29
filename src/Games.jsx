@@ -363,8 +363,11 @@ class Games extends React.Component {
                 this.state.prefill && this.state.prefill.game === this.state.gameId
             );
 
+            const developerList = Array.isArray( this.state.developers ) ? this.state.developers : [];
+
             addNode = (
                 <AddDeveloper
+                    availableDevelopers = { developerList }
                     gameId = { this.state.gameId }
                     gameNumber = { this.state.gameNumber }
                     onSaved = { prefillActive ? this.handleAddDevSaved : false }
