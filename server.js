@@ -46,7 +46,7 @@ app.get( '/api-token', ( request, response ) => {
     response.send( API_TOKEN );
 } );
 
-app.listen( process.env.PORT || LISTEN_PORT, () => {
+app.listen( process.env.PORT || LISTEN_PORT, '0.0.0.0', () => {
     // eslint-disable-next-line no-process-env
     console.log( `Admin interface listening on port ${ process.env.PORT || LISTEN_PORT }!` );
 } );
