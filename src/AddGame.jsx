@@ -6,8 +6,6 @@ import DialogContent from '@mui/material/DialogContent';
 import DialogActions from '@mui/material/DialogActions';
 import Divider from '@mui/material/Divider';
 import Button from '@mui/material/Button';
-import MenuItem from '@mui/material/MenuItem';
-import ListItemText from '@mui/material/ListItemText';
 import TextField from '@mui/material/TextField';
 import AddIcon from '@mui/icons-material/Add';
 
@@ -22,7 +20,6 @@ class AddGame extends React.Component {
         this.handleSaveGame = this.handleSaveGame.bind( this );
 
         this.state = {
-            hostname: false,
             identifier: false,
             name: false,
             shortName: false,
@@ -32,7 +29,8 @@ class AddGame extends React.Component {
 
     handleSaveGame () {
         const newGame = {
-            hostname: this.state.hostname,
+            // Every game is served from the shared domain; no longer edited per game.
+            hostname: 'developertracker.com',
             identifier: this.state.identifier,
             name: this.state.name,
             shortName: this.state.shortName || this.state.name,
@@ -41,7 +39,6 @@ class AddGame extends React.Component {
         api.post( '/games', newGame )
             .then( () => {
                 this.setState( {
-                    hostname: false,
                     identifier: false,
                     name: false,
                     shortName: false,
@@ -75,15 +72,14 @@ class AddGame extends React.Component {
     render () {
         return (
             <React.Fragment>
-                <MenuItem
+                <Button
+                    color = { 'inherit' }
                     key = { 'add-game' }
                     onClick = { this.handleShowCreate }
+                    startIcon = { <AddIcon /> }
                 >
-                    <ListItemText>
-                        { 'Add game' }
-                    </ListItemText>
-                    <AddIcon />
-                </MenuItem>
+                    { 'Add game' }
+                </Button>
                 <Dialog
                     onClose = { this.handleShowCreate }
                     open = { this.state.showCreate }
@@ -116,15 +112,6 @@ class AddGame extends React.Component {
                             name = { 'identifier' }
                             onKeyUp = { this.handleInputChange }
                             placeholder = { 'Identifier' }
-                            variant = { 'standard' }
-                        />
-                        <Divider />
-                        <TextField
-                            fullWidth
-                            label = { 'Hostname' }
-                            name = { 'hostname' }
-                            onKeyUp = { this.handleInputChange }
-                            placeholder = { 'Hostname' }
                             variant = { 'standard' }
                         />
                     </DialogContent>

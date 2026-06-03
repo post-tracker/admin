@@ -3,14 +3,12 @@ import deepEqual from 'deep-equal';
 import cookie from 'react-cookies';
 import alphanumSort from 'alphanum-sort';
 
-import Divider from '@mui/material/Divider';
-import Drawer from '@mui/material/Drawer';
-import Fab from '@mui/material/Fab';
-import MenuItem from '@mui/material/MenuItem';
-import MenuList from '@mui/material/MenuList';
-import Paper from '@mui/material/Paper';
+import AppBar from '@mui/material/AppBar';
+import Autocomplete from '@mui/material/Autocomplete';
 import Snackbar from '@mui/material/Snackbar';
-import MenuIcon from '@mui/icons-material/Menu';
+import TextField from '@mui/material/TextField';
+import Toolbar from '@mui/material/Toolbar';
+import Typography from '@mui/material/Typography';
 
 import Developer from './Developer.jsx';
 import GameInfo from './GameInfo.jsx';
@@ -21,30 +19,17 @@ import api from './api.js';
 const INIT_LOAD_WAIT_TIMEOUT = 100;
 
 const styles = {
-    activeMenuItem: {
-        color: 'red',
+    developersHeader: {
+        alignItems: 'center',
+        boxSizing: 'border-box',
+        display: 'flex',
+        justifyContent: 'space-between',
+        margin: '24px 40px 0',
     },
-    gameImage: {
-        display: 'block',
-        height: '100px',
-    },
-    gameImageWrapper: {
-        left: 0,
-        position: 'absolute',
-        top: '50%',
-        transform: 'translateY( -50% )',
-    },
-    gameTitle: {
-        fontSize: '4vw',
-        margin: '1em 40px',
-        position: 'relative',
-        textAlign: 'center',
-    },
-    toggleMenuButton: {
-        bottom: 20,
-        position: 'fixed',
-        right: 20,
-        zIndex: 1,
+    developersTitle: {
+        fontSize: '1.25rem',
+        fontWeight: 500,
+        margin: 0,
     },
     wrapper: {
         alignItems: 'flex-start',
@@ -65,11 +50,9 @@ class Games extends React.Component {
         this.selectGame = this.selectGame.bind( this );
         this.getGameData = this.getGameData.bind( this );
         this.getGamesData = this.getGamesData.bind( this );
-        this.handleToggleMenu = this.handleToggleMenu.bind( this );
         this.getCurrentGame = this.getCurrentGame.bind( this );
-        this.handleSelectGame = this.handleSelectGame.bind( this );
+        this.handleGamePick = this.handleGamePick.bind( this );
         this.handleSnackbarClose = this.handleSnackbarClose.bind( this );
-        this.handleDrawerClose = this.handleDrawerClose.bind( this );
         this.openSnackbar = this.openSnackbar.bind( this );
 
         this.handleAddDevSaved = this.handleAddDevSaved.bind( this );
@@ -80,7 +63,6 @@ class Games extends React.Component {
             games: [],
             prefill: this.readPrefillFromUrl(),
             showCreate: false,
-            showMenu: false,
             snackbarOpen: false,
             snackbarText: '',
         };
@@ -155,25 +137,9 @@ class Games extends React.Component {
         } );
     }
 
-    handleDrawerClose () {
-        this.setState( {
-            showMenu: false,
-        } );
-    }
-
-    handleToggleMenu ( event ) {
-        event.preventDefault();
-
-        this.setState( {
-            showMenu: !this.state.showMenu,
-        } );
-    }
-
-    handleSelectGame ( event ) {
-        const newGame = this.getAttributeRecursive( 'data-value', event.target );
-
-        if ( newGame ) {
-            this.selectGame( newGame );
+    handleGamePick ( event, game ) {
+        if ( game && game.identifier ) {
+            this.selectGame( game.identifier );
         }
     }
 
@@ -182,16 +148,6 @@ class Games extends React.Component {
             snackbarOpen: true,
             snackbarText: window.snackbarText,
         } );
-    }
-
-    getAttributeRecursive ( attribute, element ) {
-        const value = element.getAttribute( attribute );
-
-        if ( value === null && element.parentElement ) {
-            return this.getAttributeRecursive( attribute, element.parentElement );
-        }
-
-        return value;
     }
 
     getCurrentGame () {
@@ -290,32 +246,6 @@ class Games extends React.Component {
         return true;
     }
 
-    getGames () {
-        const gameNodes = this.state.games.map( ( game ) => {
-            let itemStyles = {};
-
-            if ( game.identifier === this.state.gameId ) {
-                itemStyles = styles.activeMenuItem;
-            }
-
-            return (
-                <MenuItem
-                    data-value = { game.identifier }
-                    key = { game.identifier }
-                    onClick = { this.handleSelectGame }
-                    style = { itemStyles }
-                >
-                    { game.name }
-                </MenuItem>
-            );
-        } );
-
-        gameNodes.push( <Divider key = { 'games-divider' } /> );
-        gameNodes.push( <AddGame key = { 'add-game' } /> );
-
-        return gameNodes;
-    }
-
     getDevelopers () {
         const developerNodes = [];
 
@@ -342,7 +272,6 @@ class Games extends React.Component {
         const newState = {
             developers: {},
             gameId: identifier,
-            showMenu: false,
         };
 
         for ( let i = 0; i < this.state.games.length; i = i + 1 ) {
@@ -386,56 +315,79 @@ class Games extends React.Component {
             );
         }
 
+        const currentGame = this.getCurrentGame() || null;
+
         return (
             <div>
-                <Drawer
-                    onClose = { this.handleDrawerClose }
-                    open = { this.state.showMenu }
-                    slotProps = { {
-                        paper: {
-                            sx: {
-                                width: 350,
-                            },
-                        },
-                    } }
+                <AppBar
+                    color = { 'default' }
+                    position = { 'static' }
                 >
-                    <MenuList>
-                        { this.getGames() }
-                    </MenuList>
-                </Drawer>
-                <h1
-                    style = { styles.gameTitle }
-                >
-                    { this.getCurrentGame().name }
-                    { this.state.gameId && this.getCurrentGame().config && this.getCurrentGame().config.boxart &&
-                        <Paper
-                            elevation = { 1 }
-                            square
-                            style = { styles.gameImageWrapper }
+                    <Toolbar>
+                        <Typography
+                            component = { 'div' }
+                            noWrap
+                            sx = { {
+                                flexShrink: 0,
+                                mr: 2,
+                            } }
+                            variant = { 'h6' }
                         >
-                            <img
-                                src = { this.getCurrentGame().config.boxart }
-                                style = { styles.gameImage }
-                            />
-                        </Paper>
-                    }
-                </h1>
-                { this.state.gameId &&
+                            { currentGame ? currentGame.name : 'Admin' }
+                        </Typography>
+                        <Autocomplete
+                            disableClearable
+                            getOptionLabel = { ( game ) => {
+                                return game.name || '';
+                            } }
+                            isOptionEqualToValue = { ( option, value ) => {
+                                return option.identifier === value.identifier;
+                            } }
+                            onChange = { this.handleGamePick }
+                            options = { this.state.games }
+                            renderInput = { ( params ) => {
+                                return (
+                                    <TextField
+                                        { ...params }
+                                        label = { 'Switch game' }
+                                        size = { 'small' }
+                                        variant = { 'outlined' }
+                                    />
+                                );
+                            } }
+                            sx = { {
+                                flexGrow: 1,
+                                maxWidth: 400,
+                                minWidth: 0,
+                                mr: 2,
+                            } }
+                            value = { currentGame }
+                        />
+                        <AddGame />
+                    </Toolbar>
+                </AppBar>
+                { currentGame &&
                     <GameInfo
-                        { ...this.getCurrentGame() }
+                        { ...currentGame }
+                        key = { currentGame.identifier }
                     />
+                }
+                { currentGame &&
+                    <div
+                        style = { styles.developersHeader }
+                    >
+                        <h2
+                            style = { styles.developersTitle }
+                        >
+                            { 'Developers' }
+                        </h2>
+                        { addNode }
+                    </div>
                 }
                 <div
                     style = { styles.wrapper }
                 >
-                    { addNode }
                     { this.getDevelopers() }
-                    <Fab
-                        onClick = { this.handleToggleMenu }
-                        style = { styles.toggleMenuButton }
-                    >
-                        <MenuIcon />
-                    </Fab>
                 </div>
                 <Snackbar
                     autoHideDuration = { 4000 }

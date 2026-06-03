@@ -8,19 +8,10 @@ import DialogContent from '@mui/material/DialogContent';
 import DialogActions from '@mui/material/DialogActions';
 import Divider from '@mui/material/Divider';
 import Button from '@mui/material/Button';
-import Fab from '@mui/material/Fab';
 import TextField from '@mui/material/TextField';
 import AddIcon from '@mui/icons-material/Add';
 
 import api from './api.js';
-
-const styles = {
-    addDeveloperButton: {
-        position: 'absolute',
-        right: '20px',
-        top: '20px',
-    },
-};
 
 class AddDeveloper extends React.Component {
     constructor ( props ) {
@@ -251,13 +242,14 @@ class AddDeveloper extends React.Component {
         const attachingToExisting = Boolean( this.state.existingDeveloperId );
 
         return (
-            <div>
-                <Fab
+            <React.Fragment>
+                <Button
                     onClick = { this.handleShowCreate }
-                    style = { styles.addDeveloperButton }
+                    startIcon = { <AddIcon /> }
+                    variant = { 'contained' }
                 >
-                    <AddIcon />
-                </Fab>
+                    { 'Add developer' }
+                </Button>
                 <Dialog
                     fullWidth
                     onClose = { this.handleShowCreate }
@@ -374,7 +366,7 @@ class AddDeveloper extends React.Component {
                         </Button>
                     </DialogActions>
                 </Dialog>
-            </div>
+            </React.Fragment>
         );
     }
 }

@@ -20,12 +20,20 @@ const styles = {
     title: {
         margin: 0,
     },
-    wrapper: {
-        boxSizing: 'border-box',
-        margin: 0,
-        padding: '20px 30px',
-        position: 'relative',
-        width: 340,
+};
+
+const wrapperSx = {
+    boxSizing: 'border-box',
+    m: 0,
+    maxWidth: '100%',
+    p: {
+        sm: '20px 30px',
+        xs: '16px 18px',
+    },
+    position: 'relative',
+    width: {
+        sm: 340,
+        xs: '100%',
     },
 };
 
@@ -71,7 +79,7 @@ class Developer extends React.PureComponent {
             <Paper
                 elevation = { 1 }
                 square
-                style = { styles.wrapper }
+                sx = { wrapperSx }
             >
                 <div
                     style = { styles.header }
