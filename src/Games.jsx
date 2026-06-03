@@ -3,13 +3,14 @@ import deepEqual from 'deep-equal';
 import cookie from 'react-cookies';
 import alphanumSort from 'alphanum-sort';
 
-import Divider from 'material-ui/Divider';
-import Drawer from 'material-ui/Drawer';
-import FloatingActionButton from 'material-ui/FloatingActionButton';
-import MenuItem from 'material-ui/MenuItem';
-import NavigationMenu from 'material-ui/svg-icons/navigation/menu';
-import Paper from 'material-ui/Paper';
-import Snackbar from 'material-ui/Snackbar';
+import Divider from '@mui/material/Divider';
+import Drawer from '@mui/material/Drawer';
+import Fab from '@mui/material/Fab';
+import MenuItem from '@mui/material/MenuItem';
+import MenuList from '@mui/material/MenuList';
+import Paper from '@mui/material/Paper';
+import Snackbar from '@mui/material/Snackbar';
+import MenuIcon from '@mui/icons-material/Menu';
 
 import Developer from './Developer.jsx';
 import GameInfo from './GameInfo.jsx';
@@ -24,6 +25,7 @@ const styles = {
         color: 'red',
     },
     gameImage: {
+        display: 'block',
         height: '100px',
     },
     gameImageWrapper: {
@@ -45,10 +47,11 @@ const styles = {
         zIndex: 1,
     },
     wrapper: {
-        alignItems: 'center',
+        alignItems: 'flex-start',
         boxSizing: 'border-box',
         display: 'flex',
         flexWrap: 'wrap',
+        gap: 20,
         justifyContent: 'center',
         padding: 20,
         width: '100%',
@@ -66,6 +69,7 @@ class Games extends React.Component {
         this.getCurrentGame = this.getCurrentGame.bind( this );
         this.handleSelectGame = this.handleSelectGame.bind( this );
         this.handleSnackbarClose = this.handleSnackbarClose.bind( this );
+        this.handleDrawerClose = this.handleDrawerClose.bind( this );
         this.openSnackbar = this.openSnackbar.bind( this );
 
         this.handleAddDevSaved = this.handleAddDevSaved.bind( this );
@@ -80,10 +84,6 @@ class Games extends React.Component {
             snackbarOpen: false,
             snackbarText: '',
         };
-    }
-
-    componentWillMount () {
-        this.getGamesData();
     }
 
     readPrefillFromUrl () {
@@ -127,6 +127,8 @@ class Games extends React.Component {
         window.addEventListener( 'data-update', this.getGameData );
         window.addEventListener( 'games-update', this.getGamesData );
         window.addEventListener( 'open-snackbar', this.openSnackbar );
+
+        this.getGamesData();
     }
 
     shouldComponentUpdate ( nextProps, nextState ) {
@@ -150,6 +152,12 @@ class Games extends React.Component {
     handleSnackbarClose () {
         this.setState( {
             snackbarOpen: false,
+        } );
+    }
+
+    handleDrawerClose () {
+        this.setState( {
+            showMenu: false,
         } );
     }
 
@@ -237,7 +245,6 @@ class Games extends React.Component {
                 } );
             } )
             .catch( ( error ) => {
-                // eslint-disable-next-line no-console
                 console.error( error );
             } );
     }
@@ -277,7 +284,6 @@ class Games extends React.Component {
                 this.getGameData( currentGame.identifier );
             } )
             .catch( ( error ) => {
-                // eslint-disable-next-line no-console
                 console.error( error );
             } );
 
@@ -296,15 +302,16 @@ class Games extends React.Component {
                 <MenuItem
                     data-value = { game.identifier }
                     key = { game.identifier }
-                    onTouchTap = { this.handleSelectGame }
-                    primaryText = { game.name }
+                    onClick = { this.handleSelectGame }
                     style = { itemStyles }
-                />
+                >
+                    { game.name }
+                </MenuItem>
             );
         } );
 
-        gameNodes.push( <Divider /> );
-        gameNodes.push( <AddGame /> );
+        gameNodes.push( <Divider key = { 'games-divider' } /> );
+        gameNodes.push( <AddGame key = { 'add-game' } /> );
 
         return gameNodes;
     }
@@ -382,12 +389,19 @@ class Games extends React.Component {
         return (
             <div>
                 <Drawer
+                    onClose = { this.handleDrawerClose }
                     open = { this.state.showMenu }
-                    style = { styles.list }
-                    value = { this.state.gameId }
-                    width = { 350 }
+                    slotProps = { {
+                        paper: {
+                            sx: {
+                                width: 350,
+                            },
+                        },
+                    } }
                 >
-                    { this.getGames() }
+                    <MenuList>
+                        { this.getGames() }
+                    </MenuList>
                 </Drawer>
                 <h1
                     style = { styles.gameTitle }
@@ -395,9 +409,9 @@ class Games extends React.Component {
                     { this.getCurrentGame().name }
                     { this.state.gameId && this.getCurrentGame().config && this.getCurrentGame().config.boxart &&
                         <Paper
-                            rounded = { false }
+                            elevation = { 1 }
+                            square
                             style = { styles.gameImageWrapper }
-                            zDepth = { 1 }
                         >
                             <img
                                 src = { this.getCurrentGame().config.boxart }
@@ -416,17 +430,17 @@ class Games extends React.Component {
                 >
                     { addNode }
                     { this.getDevelopers() }
-                    <FloatingActionButton
-                        onTouchTap = { this.handleToggleMenu }
+                    <Fab
+                        onClick = { this.handleToggleMenu }
                         style = { styles.toggleMenuButton }
                     >
-                        <NavigationMenu />
-                    </FloatingActionButton>
+                        <MenuIcon />
+                    </Fab>
                 </div>
                 <Snackbar
                     autoHideDuration = { 4000 }
                     message = { this.state.snackbarText }
-                    onRequestClose = { this.handleSnackbarClose }
+                    onClose = { this.handleSnackbarClose }
                     open = { this.state.snackbarOpen }
                 />
             </div>

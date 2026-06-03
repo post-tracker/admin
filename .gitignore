@@ -1,2 +1,5 @@
 node_modules/
 .env
+
+# Vite build output (built in CI / Docker, not committed)
+web/

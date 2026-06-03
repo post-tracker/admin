@@ -1,181 +1,84 @@
-import https from 'https';
-import querystring from 'querystring';
+// The admin talks to the production rest-api by default; the token served at
+// /api-token authorises it, so data loads with no extra services running.
+// To develop against a local rest-api instead, set VITE_API_BASE in .env — use
+// an https origin (e.g. a portless https://*.localhost URL) so the browser does
+// not block it as mixed content under the https dev server.
+const API_BASE = import.meta.env.VITE_API_BASE || 'https://api.developertracker.com';
 
-let API_HOSTNAME = 'api.developertracker.com';
-let API_PORT = 443;
+const authHeaders = function authHeaders ( extra ) {
+    return {
+        Authorization: `Bearer ${ window.apiToken }`,
+        ...extra,
+    };
+};
 
-if ( window.location.hostname === 'localhost' ) {
-    API_HOSTNAME = 'lvh.me';
-    // eslint-disable-next-line no-magic-numbers
-    API_PORT = 3000;
-}
+const ensureOk = function ensureOk ( response, requestPath ) {
+    if ( !response.ok ) {
+        throw new Error( `${ API_BASE }${ requestPath } returned ${ response.status }` );
+    }
 
-const SUCESS_STATUS_CODE = 200;
+    return response;
+};
 
 const get = function get ( requestPath, queryParams ) {
-    return new Promise( ( resolve, reject ) => {
-        const options = {
-            headers: {
-                Authorization: `Bearer ${ window.apiToken }`,
-            },
-            hostname: API_HOSTNAME,
-            method: 'GET',
-            path: requestPath,
-            port: API_PORT,
-        };
+    let path = requestPath;
 
-        if ( queryParams ) {
-            options.path = `${ options.path }?${ querystring.stringify( queryParams ) }`;
-        }
+    if ( queryParams ) {
+        path = `${ path }?${ new URLSearchParams( queryParams ).toString() }`;
+    }
 
-        const request = https.request( options, ( response ) => {
-            let body = '';
-
-            response.setEncoding( 'utf8' );
-
-            if ( response.statusCode !== SUCESS_STATUS_CODE ) {
-                reject( new Error( `${ API_HOSTNAME }${ requestPath } returned ${ response.statusCode }` ) );
-
-                return false;
-            }
-
-            response.on( 'data', ( chunk ) => {
-                body = body + chunk;
-            } );
-
-            response.on( 'end', () => {
-                resolve( JSON.parse( body ) );
-            } );
-
-            return true;
+    return fetch( `${ API_BASE }${ path }`, {
+        headers: authHeaders(),
+        method: 'GET',
+    } )
+        .then( ( response ) => {
+            return ensureOk( response, path );
+        } )
+        .then( ( response ) => {
+            return response.json();
         } );
-
-        request.on( 'error', ( requestError ) => {
-            console.log( requestError );
-            reject( requestError );
-        } );
-
-        request.end();
-    } );
 };
 
 const post = function post ( requestPath, item ) {
-    return new Promise( ( resolve, reject ) => {
-        const payload = JSON.stringify( item );
-        const options = {
-            headers: {
-                Authorization: `Bearer ${ window.apiToken }`,
-                'Content-Length': Buffer.byteLength( payload ),
-                'Content-Type': 'application/json',
-            },
-            hostname: API_HOSTNAME,
-            method: 'POST',
-            path: requestPath,
-            port: API_PORT,
-        };
-
-        const request = https.request( options, ( response ) => {
-            response.setEncoding( 'utf8' );
-
-            if ( response.statusCode !== SUCESS_STATUS_CODE ) {
-                reject( new Error( `${ API_HOSTNAME }${ requestPath } returned ${ response.statusCode }` ) );
-
-                return false;
-            }
-
-            resolve();
-
-            return true;
+    return fetch( `${ API_BASE }${ requestPath }`, {
+        body: JSON.stringify( item ),
+        headers: authHeaders( {
+            'Content-Type': 'application/json',
+        } ),
+        method: 'POST',
+    } )
+        .then( ( response ) => {
+            ensureOk( response, requestPath );
         } );
-
-        request.on( 'error', ( requestError ) => {
-            reject( requestError );
-        } );
-
-        request.write( payload );
-
-        request.end();
-    } );
 };
 
 const patch = function patch ( requestPath, id, properties ) {
-    return new Promise( ( resolve, reject ) => {
-        const payload = JSON.stringify( {
+    return fetch( `${ API_BASE }${ requestPath }`, {
+        body: JSON.stringify( {
             id: id,
             properties: properties,
+        } ),
+        headers: authHeaders( {
+            'Content-Type': 'application/json',
+        } ),
+        method: 'PATCH',
+    } )
+        .then( ( response ) => {
+            ensureOk( response, requestPath );
         } );
-        const options = {
-            headers: {
-                Authorization: `Bearer ${ window.apiToken }`,
-                'Content-Length': Buffer.byteLength( payload ),
-                'Content-Type': 'application/json',
-            },
-            hostname: API_HOSTNAME,
-            method: 'PATCH',
-            path: requestPath,
-            port: API_PORT,
-        };
-
-        const request = https.request( options, ( response ) => {
-            response.setEncoding( 'utf8' );
-
-            if ( response.statusCode !== SUCESS_STATUS_CODE ) {
-                reject( new Error( `${ API_HOSTNAME }${ requestPath } returned ${ response.statusCode }` ) );
-
-                return false;
-            }
-
-            resolve();
-
-            return true;
-        } );
-
-        request.on( 'error', ( requestError ) => {
-            reject( requestError );
-        } );
-
-        request.write( payload );
-
-        request.end();
-    } );
 };
 
 const deleteResource = function deleteResource ( resourcePath ) {
-    return new Promise( ( resolve, reject ) => {
-        const options = {
-            headers: {
-                Authorization: `Bearer ${ window.apiToken }`,
-            },
-            hostname: API_HOSTNAME,
-            method: 'DELETE',
-            path: resourcePath,
-            port: API_PORT,
-        };
-
-        const request = https.request( options, ( response ) => {
-            response.setEncoding( 'utf8' );
-
-            if ( response.statusCode !== SUCESS_STATUS_CODE ) {
-                reject( new Error( `${ API_HOSTNAME }${ resourcePath } returned ${ response.statusCode }` ) );
-
-                return false;
-            }
-
-            resolve();
-
-            return true;
+    return fetch( `${ API_BASE }${ resourcePath }`, {
+        headers: authHeaders(),
+        method: 'DELETE',
+    } )
+        .then( ( response ) => {
+            ensureOk( response, resourcePath );
         } );
-
-        request.on( 'error', ( requestError ) => {
-            console.log( requestError );
-            reject( requestError );
-        } );
-
-        request.end();
-    } );
 };
 
-module.exports = {
+export default {
     deleteResource: deleteResource,
     get: get,
     patch: patch,

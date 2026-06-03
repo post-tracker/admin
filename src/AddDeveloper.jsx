@@ -1,13 +1,16 @@
 import React from 'react';
 import PropTypes from 'prop-types';
 
-import AutoComplete from 'material-ui/AutoComplete';
-import ContentAdd from 'material-ui/svg-icons/content/add';
-import Dialog from 'material-ui/Dialog';
-import Divider from 'material-ui/Divider';
-import FlatButton from 'material-ui/FlatButton';
-import FloatingActionButton from 'material-ui/FloatingActionButton';
-import TextField from 'material-ui/TextField';
+import Autocomplete from '@mui/material/Autocomplete';
+import Dialog from '@mui/material/Dialog';
+import DialogTitle from '@mui/material/DialogTitle';
+import DialogContent from '@mui/material/DialogContent';
+import DialogActions from '@mui/material/DialogActions';
+import Divider from '@mui/material/Divider';
+import Button from '@mui/material/Button';
+import Fab from '@mui/material/Fab';
+import TextField from '@mui/material/TextField';
+import AddIcon from '@mui/icons-material/Add';
 
 import api from './api.js';
 
@@ -32,23 +35,23 @@ class AddDeveloper extends React.Component {
         this.state = this.buildInitialState( props );
     }
 
-    componentWillReceiveProps ( nextProps ) {
+    componentDidUpdate ( prevProps ) {
         if (
-            nextProps.prefillName !== this.props.prefillName
-            || nextProps.prefillService !== this.props.prefillService
-            || nextProps.prefillIdentifier !== this.props.prefillIdentifier
-            || nextProps.openOnMount !== this.props.openOnMount
+            this.props.prefillName !== prevProps.prefillName
+            || this.props.prefillService !== prevProps.prefillService
+            || this.props.prefillIdentifier !== prevProps.prefillIdentifier
+            || this.props.openOnMount !== prevProps.openOnMount
         ) {
-            this.setState( this.buildInitialState( nextProps ) );
+            this.setState( this.buildInitialState( this.props ) );
 
             return;
         }
 
-        const developersChanged = nextProps.availableDevelopers !== this.props.availableDevelopers;
+        const developersChanged = this.props.availableDevelopers !== prevProps.availableDevelopers;
         const haveNoMatchYet = !this.state.existingDeveloperId && this.state.existingDeveloperNick === '';
 
-        if ( developersChanged && haveNoMatchYet && nextProps.prefillName ) {
-            const autoMatch = this.findExistingDeveloperMatch( nextProps.prefillName, nextProps.availableDevelopers );
+        if ( developersChanged && haveNoMatchYet && this.props.prefillName ) {
+            const autoMatch = this.findExistingDeveloperMatch( this.props.prefillName, this.props.availableDevelopers );
 
             if ( autoMatch ) {
                 this.setState( {
@@ -112,7 +115,7 @@ class AddDeveloper extends React.Component {
             existingDeveloperId: match
                 ? match.id
                 : false,
-            existingDeveloperNick: chosen,
+            existingDeveloperNick: chosen || '',
         } );
     }
 
@@ -241,22 +244,6 @@ class AddDeveloper extends React.Component {
     }
 
     render () {
-        const actions = [
-            <FlatButton
-                key = { 'cancel-button' }
-                label = { 'Cancel' }
-                onTouchTap = { this.handleShowCreate }
-                secondary
-            />,
-            <FlatButton
-                default
-                key = { 'confirm-button' }
-                keyboardFocused
-                label = { 'Submit' }
-                onTouchTap = { this.handleSaveDeveloper }
-            />,
-        ];
-
         const developerNicks = this.props.availableDevelopers.map( ( developer ) => {
             return developer.nick;
         } );
@@ -265,99 +252,127 @@ class AddDeveloper extends React.Component {
 
         return (
             <div>
-                <FloatingActionButton
-                    onTouchTap = { this.handleShowCreate }
+                <Fab
+                    onClick = { this.handleShowCreate }
                     style = { styles.addDeveloperButton }
                 >
-                    <ContentAdd />
-                </FloatingActionButton>
+                    <AddIcon />
+                </Fab>
                 <Dialog
-                    actions = { actions }
-                    autoScrollBodyContent
-                    modal = { false }
-                    onRequestClose = { this.handleClose }
+                    fullWidth
+                    onClose = { this.handleShowCreate }
                     open = { this.state.showCreate }
-                    title = { `Create developer - ${ this.props.gameId }` }
                 >
-                    { developerNicks.length > 0 &&
-                        <div>
-                            <AutoComplete
-                                dataSource = { developerNicks }
-                                filter = { AutoComplete.caseInsensitiveFilter }
-                                floatingLabelText = { 'Attach to existing developer (leave blank to create new)' }
-                                fullWidth
-                                onNewRequest = { this.handlePickExistingDeveloper }
-                                onUpdateInput = { this.handleExistingDeveloperInput }
-                                openOnFocus
-                                searchText = { this.state.existingDeveloperNick }
-                                underlineShow = { false }
-                            />
-                            <Divider />
-                        </div>
-                    }
-                    { !attachingToExisting &&
-                        <div>
-                            <TextField
-                                defaultValue = { this.state.name || '' }
-                                floatingLabelText = { 'Name' }
-                                fullWidth
-                                hintText = { 'Name' }
-                                name = { 'name' }
-                                onKeyUp = { this.handleInputChange }
-                                underlineShow = { false }
-                            />
-                            <Divider />
-                            <TextField
-                                defaultValue = { this.state.nick || '' }
-                                floatingLabelText = { 'Nick' }
-                                fullWidth
-                                hintText = { 'Nick' }
-                                name = { 'nick' }
-                                onKeyUp = { this.handleInputChange }
-                                underlineShow = { false }
-                            />
-                            <Divider />
-                            <TextField
-                                floatingLabelText = { 'Group' }
-                                fullWidth
-                                hintText = { 'Group' }
-                                name = { 'group' }
-                                onKeyUp = { this.handleInputChange }
-                                underlineShow = { false }
-                            />
-                            <Divider />
-                            <TextField
-                                floatingLabelText = { 'Role' }
-                                fullWidth
-                                hintText = { 'Role' }
-                                name = { 'role' }
-                                onKeyUp = { this.handleInputChange }
-                                underlineShow = { false }
-                            />
-                        </div>
-                    }
-                    { this.state.service && this.state.identifier &&
-                        <div>
-                            <Divider />
-                            <TextField
-                                defaultValue = { this.state.service }
-                                disabled
-                                floatingLabelText = { 'Account service' }
-                                fullWidth
-                                name = { 'service' }
-                                underlineShow = { false }
-                            />
-                            <Divider />
-                            <TextField
-                                defaultValue = { this.state.identifier }
-                                disabled
-                                floatingLabelText = { 'Account identifier' }
-                                fullWidth
-                                name = { 'identifier' }
-                                underlineShow = { false }
-                            />
-                        </div>
-                    }
+                    <DialogTitle>
+                        { `Create developer - ${ this.props.gameId }` }
+                    </DialogTitle>
+                    <DialogContent>
+                        { developerNicks.length > 0 &&
+                            <div>
+                                <Autocomplete
+                                    freeSolo
+                                    inputValue = { String( this.state.existingDeveloperNick || '' ) }
+                                    onChange = { ( event, value ) => {
+                                        this.handlePickExistingDeveloper( value );
+                                    } }
+                                    onInputChange = { ( event, value ) => {
+                                        this.handleExistingDeveloperInput( value );
+                                    } }
+                                    openOnFocus
+                                    options = { developerNicks }
+                                    renderInput = { ( params ) => {
+                                        return (
+                                            <TextField
+                                                { ...params }
+                                                label = { 'Attach to existing developer (leave blank to create new)' }
+                                                variant = { 'standard' }
+                                            />
+                                        );
+                                    } }
+                                />
+                                <Divider />
+                            </div>
+                        }
+                        { !attachingToExisting &&
+                            <div>
+                                <TextField
+                                    defaultValue = { this.state.name || '' }
+                                    fullWidth
+                                    label = { 'Name' }
+                                    name = { 'name' }
+                                    onKeyUp = { this.handleInputChange }
+                                    placeholder = { 'Name' }
+                                    variant = { 'standard' }
+                                />
+                                <Divider />
+                                <TextField
+                                    defaultValue = { this.state.nick || '' }
+                                    fullWidth
+                                    label = { 'Nick' }
+                                    name = { 'nick' }
+                                    onKeyUp = { this.handleInputChange }
+                                    placeholder = { 'Nick' }
+                                    variant = { 'standard' }
+                                />
+                                <Divider />
+                                <TextField
+                                    fullWidth
+                                    label = { 'Group' }
+                                    name = { 'group' }
+                                    onKeyUp = { this.handleInputChange }
+                                    placeholder = { 'Group' }
+                                    variant = { 'standard' }
+                                />
+                                <Divider />
+                                <TextField
+                                    fullWidth
+                                    label = { 'Role' }
+                                    name = { 'role' }
+                                    onKeyUp = { this.handleInputChange }
+                                    placeholder = { 'Role' }
+                                    variant = { 'standard' }
+                                />
+                            </div>
+                        }
+                        { this.state.service && this.state.identifier &&
+                            <div>
+                                <Divider />
+                                <TextField
+                                    defaultValue = { this.state.service }
+                                    disabled
+                                    fullWidth
+                                    label = { 'Account service' }
+                                    name = { 'service' }
+                                    variant = { 'standard' }
+                                />
+                                <Divider />
+                                <TextField
+                                    defaultValue = { this.state.identifier }
+                                    disabled
+                                    fullWidth
+                                    label = { 'Account identifier' }
+                                    name = { 'identifier' }
+                                    variant = { 'standard' }
+                                />
+                            </div>
+                        }
+                    </DialogContent>
+                    <DialogActions>
+                        <Button
+                            color = { 'secondary' }
+                            key = { 'cancel-button' }
+                            onClick = { this.handleShowCreate }
+                        >
+                            { 'Cancel' }
+                        </Button>
+                        <Button
+                            autoFocus
+                            key = { 'confirm-button' }
+                            onClick = { this.handleSaveDeveloper }
+                        >
+                            { 'Submit' }
+                        </Button>
+                    </DialogActions>
                 </Dialog>
             </div>
         );

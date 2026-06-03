@@ -1,11 +1,11 @@
 import React from 'react';
 import PropTypes from 'prop-types';
 
-import Divider from 'material-ui/Divider';
-import TextField from 'material-ui/TextField';
-import IconButton from 'material-ui/IconButton';
-import ContentSave from 'material-ui/svg-icons/content/save';
-import AutoComplete from 'material-ui/AutoComplete';
+import Divider from '@mui/material/Divider';
+import TextField from '@mui/material/TextField';
+import IconButton from '@mui/material/IconButton';
+import Autocomplete from '@mui/material/Autocomplete';
+import SaveIcon from '@mui/icons-material/Save';
 
 import api from './api.js';
 
@@ -44,9 +44,8 @@ class GameField extends React.Component {
             if ( this.props.json ) {
                 try {
                     newValue = JSON.parse( valueOrEvent.target.value );
-                } catch ( jsonError ) {
+                } catch {
                     errorText = 'invalid json';
-                    // console.error( jsonError );
                 }
             } else {
                 newValue = valueOrEvent.target.value;
@@ -87,28 +86,34 @@ class GameField extends React.Component {
                 window.snackbarText = error.message;
                 window.dispatchEvent( new Event( 'open-snackbar' ) );
             } );
+
+        return true;
     }
 
     getInputField () {
         if ( this.props.availableOptions.length > 0 ) {
             return (
-                <AutoComplete
-                    dataSource = { this.props.availableOptions }
-                    filter = { AutoComplete.noFilter }
-                    floatingLabelFixed
-                    floatingLabelText = { this.props.displayName || this.props.name }
-                    key = { `${ this.props.name }-${ this.props.value }` }
-                    onUpdateInput = { this.handleValueChange }
-                    openOnFocus
-                    popoverProps = { {
-                        canAutoPosition: true,
-                        style: {
-                            bottom: 0,
-                            overflowY: 'auto',
-                        },
+                <Autocomplete
+                    filterOptions = { ( options ) => {
+                        return options;
                     } }
-                    searchText = { this.state.newValue || this.props.value }
-                    underlineShow = { false }
+                    freeSolo
+                    inputValue = { String( this.state.newValue || this.props.value || '' ) }
+                    key = { `${ this.props.name }-${ this.props.value }` }
+                    onInputChange = { ( event, value ) => {
+                        this.handleValueChange( value );
+                    } }
+                    openOnFocus
+                    options = { this.props.availableOptions }
+                    renderInput = { ( params ) => {
+                        return (
+                            <TextField
+                                { ...params }
+                                label = { this.props.displayName || this.props.name }
+                                variant = { 'standard' }
+                            />
+                        );
+                    } }
                 />
             );
         }
@@ -118,9 +123,8 @@ class GameField extends React.Component {
 
         if ( this.props.json ) {
             fieldValue = JSON.stringify( fieldValue, null, 4 );
-            extraProps.multiLine = true;
+            extraProps.multiline = true;
             extraProps.rows = 11;
-            extraProps.rowsMax = 11;
         }
 
         return (
@@ -128,21 +132,25 @@ class GameField extends React.Component {
                 { ...extraProps }
                 defaultValue = { fieldValue }
                 disabled = { this.props.disabled }
-                errorText = { this.state.errorText }
-                floatingLabelFixed
-                floatingLabelText = { this.props.displayName || this.props.name }
+                error = { Boolean( this.state.errorText ) }
                 fullWidth
-                inputStyle = { this.props.style }
+                helperText = { this.state.errorText || '' }
                 key = { `${ this.props.name }-${ this.props.value }` }
+                label = { this.props.displayName || this.props.name }
                 name = { this.props.name }
                 onKeyUp = { this.handleValueChange }
-                underlineShow = { false }
+                slotProps = { {
+                    htmlInput: {
+                        style: this.props.style,
+                    },
+                } }
+                variant = { 'standard' }
             />
         );
     }
 
     render () {
-        let wrapperStyles = Object.assign( {}, styles.wrapper, this.props.style );
+        const wrapperStyles = Object.assign( {}, styles.wrapper, this.props.style );
 
         return (
             <div
@@ -154,10 +162,10 @@ class GameField extends React.Component {
                         if ( this.state.newValue !== false ) {
                             return (
                                 <IconButton
-                                    onTouchTap = { this.handleSave }
+                                    onClick = { this.handleSave }
                                     style = { styles.actionButton }
                                 >
-                                    <ContentSave />
+                                    <SaveIcon />
                                 </IconButton>
                             );
                         }

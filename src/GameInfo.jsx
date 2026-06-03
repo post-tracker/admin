@@ -1,11 +1,9 @@
 import React from 'react';
 import PropTypes from 'prop-types';
 
-import Paper from 'material-ui/Paper';
-import Toggle from 'material-ui/Toggle';
+import Paper from '@mui/material/Paper';
 
 import GameField from './GameField.jsx';
-import api from './api.js';
 
 const styles = {
     basicFieldsWrapper: {
@@ -25,24 +23,6 @@ const styles = {
 };
 
 class GameInfo extends React.PureComponent {
-    constructor ( props ) {
-        super( props );
-
-        this.handleActiveToggle = this.handleActiveToggle.bind( this );
-    }
-
-    handleActiveToggle ( event, isInputChecked ) {
-        api.patch( `/games/${ this.props.id }`, this.props.id, {
-            active: isInputChecked,
-        } )
-            .then( () => {
-                console.log( 'updated' );
-            } )
-            .catch( ( error ) => {
-                console.error( error );
-            } );
-    }
-
     getGameFields () {
         const gameFields = [];
 
@@ -77,9 +57,9 @@ class GameInfo extends React.PureComponent {
     render () {
         return (
             <Paper
-                rounded = { false }
+                elevation = { 1 }
+                square
                 style = { styles.wrapper }
-                zDepth = { 1 }
             >
                 <div
                     style = { styles.basicFieldsWrapper }

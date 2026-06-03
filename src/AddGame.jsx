@@ -1,11 +1,15 @@
 import React from 'react';
 
-import ContentAdd from 'material-ui/svg-icons/content/add';
-import Dialog from 'material-ui/Dialog';
-import Divider from 'material-ui/Divider';
-import FlatButton from 'material-ui/FlatButton';
-import MenuItem from 'material-ui/MenuItem';
-import TextField from 'material-ui/TextField';
+import Dialog from '@mui/material/Dialog';
+import DialogTitle from '@mui/material/DialogTitle';
+import DialogContent from '@mui/material/DialogContent';
+import DialogActions from '@mui/material/DialogActions';
+import Divider from '@mui/material/Divider';
+import Button from '@mui/material/Button';
+import MenuItem from '@mui/material/MenuItem';
+import ListItemText from '@mui/material/ListItemText';
+import TextField from '@mui/material/TextField';
+import AddIcon from '@mui/icons-material/Add';
 
 import api from './api.js';
 
@@ -69,74 +73,79 @@ class AddGame extends React.Component {
     }
 
     render () {
-        const actions = [
-            <FlatButton
-                key = { 'cancel-button' }
-                label = { 'Cancel' }
-                onTouchTap = { this.handleShowCreate }
-                secondary
-            />,
-            <FlatButton
-                default
-                key = { 'confirm-button' }
-                keyboardFocused
-                label = { 'Submit' }
-                onTouchTap = { this.handleSaveGame }
-            />,
-        ];
-
         return (
-            <MenuItem
-                key = { 'add-game' }
-                onTouchTap = { this.handleShowCreate }
-                primaryText = { 'Add game' }
-                rightIcon = { <ContentAdd /> }
-            >
-                <Dialog
-                    actions = { actions }
-                    autoScrollBodyContent
-                    modal = { false }
-                    onRequestClose = { this.handleClose }
-                    open = { this.state.showCreate }
-                    title = { 'Create game' }
+            <React.Fragment>
+                <MenuItem
+                    key = { 'add-game' }
+                    onClick = { this.handleShowCreate }
                 >
-                    <TextField
-                        floatingLabelText = { 'Name' }
-                        fullWidth
-                        hintText = { 'Name' }
-                        name = { 'name' }
-                        onKeyUp = { this.handleInputChange }
-                        underlineShow = { false }
-                    />
-                    <Divider />
-                    <TextField
-                        floatingLabelText = { 'Short name' }
-                        fullWidth
-                        hintText = { 'Short name' }
-                        name = { 'shortName' }
-                        onKeyUp = { this.handleInputChange }
-                        underlineShow = { false }
-                    />
-                    <Divider />
-                    <TextField
-                        floatingLabelText = { 'Identifier' }
-                        fullWidth
-                        hintText = { 'Identifier' }
-                        name = { 'identifier' }
-                        onKeyUp = { this.handleInputChange }
-                        underlineShow = { false }
-                    />
-                    <Divider />
-                    <TextField
-                        floatingLabelText = { 'Hostname' }
-                        fullWidth
-                        hintText = { 'Hostname' }
-                        name = { 'hostname' }
-                        onKeyUp = { this.handleInputChange }
-                        underlineShow = { false }
-                    />
+                    <ListItemText>
+                        { 'Add game' }
+                    </ListItemText>
+                    <AddIcon />
+                </MenuItem>
+                <Dialog
+                    onClose = { this.handleShowCreate }
+                    open = { this.state.showCreate }
+                >
+                    <DialogTitle>
+                        { 'Create game' }
+                    </DialogTitle>
+                    <DialogContent>
+                        <TextField
+                            fullWidth
+                            label = { 'Name' }
+                            name = { 'name' }
+                            onKeyUp = { this.handleInputChange }
+                            placeholder = { 'Name' }
+                            variant = { 'standard' }
+                        />
+                        <Divider />
+                        <TextField
+                            fullWidth
+                            label = { 'Short name' }
+                            name = { 'shortName' }
+                            onKeyUp = { this.handleInputChange }
+                            placeholder = { 'Short name' }
+                            variant = { 'standard' }
+                        />
+                        <Divider />
+                        <TextField
+                            fullWidth
+                            label = { 'Identifier' }
+                            name = { 'identifier' }
+                            onKeyUp = { this.handleInputChange }
+                            placeholder = { 'Identifier' }
+                            variant = { 'standard' }
+                        />
+                        <Divider />
+                        <TextField
+                            fullWidth
+                            label = { 'Hostname' }
+                            name = { 'hostname' }
+                            onKeyUp = { this.handleInputChange }
+                            placeholder = { 'Hostname' }
+                            variant = { 'standard' }
+                        />
+                    </DialogContent>
+                    <DialogActions>
+                        <Button
+                            color = { 'secondary' }
+                            key = { 'cancel-button' }
+                            onClick = { this.handleShowCreate }
+                        >
+                            { 'Cancel' }
+                        </Button>
+                        <Button
+                            autoFocus
+                            key = { 'confirm-button' }
+                            onClick = { this.handleSaveGame }
+                        >
+                            { 'Submit' }
+                        </Button>
+                    </DialogActions>
                 </Dialog>
-            </MenuItem>
+            </React.Fragment>
         );
     }
 }

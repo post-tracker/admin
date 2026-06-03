@@ -1,14 +1,16 @@
 import React from 'react';
 import PropTypes from 'prop-types';
 
-import Dialog from 'material-ui/Dialog';
-import FlatButton from 'material-ui/FlatButton';
-import Divider from 'material-ui/Divider';
-import TextField from 'material-ui/TextField';
-import IconButton from 'material-ui/IconButton';
-import ActionDelete from 'material-ui/svg-icons/action/delete';
-import ContentSave from 'material-ui/svg-icons/content/save';
-import AutoComplete from 'material-ui/AutoComplete';
+import Dialog from '@mui/material/Dialog';
+import DialogContent from '@mui/material/DialogContent';
+import DialogActions from '@mui/material/DialogActions';
+import Button from '@mui/material/Button';
+import Divider from '@mui/material/Divider';
+import TextField from '@mui/material/TextField';
+import IconButton from '@mui/material/IconButton';
+import Autocomplete from '@mui/material/Autocomplete';
+import DeleteIcon from '@mui/icons-material/Delete';
+import SaveIcon from '@mui/icons-material/Save';
 
 import api from './api.js';
 
@@ -114,23 +116,27 @@ class DeveloperField extends React.Component {
     getInputField () {
         if ( this.props.availableOptions.length > 0 ) {
             return (
-                <AutoComplete
-                    dataSource = { this.props.availableOptions }
-                    filter = { AutoComplete.noFilter }
-                    floatingLabelFixed
-                    floatingLabelText = { this.props.displayName || this.props.name }
-                    key = { `${ this.props.name }-${ this.props.value }` }
-                    onUpdateInput = { this.handleValueChange }
-                    openOnFocus
-                    popoverProps = { {
-                        canAutoPosition: true,
-                        style: {
-                            bottom: 0,
-                            overflowY: 'auto',
-                        },
+                <Autocomplete
+                    filterOptions = { ( options ) => {
+                        return options;
                     } }
-                    searchText = { this.state.newValue || this.props.value }
-                    underlineShow = { false }
+                    freeSolo
+                    inputValue = { String( this.state.newValue || this.props.value || '' ) }
+                    key = { `${ this.props.name }-${ this.props.value }` }
+                    onInputChange = { ( event, value ) => {
+                        this.handleValueChange( value );
+                    } }
+                    openOnFocus
+                    options = { this.props.availableOptions }
+                    renderInput = { ( params ) => {
+                        return (
+                            <TextField
+                                { ...params }
+                                label = { this.props.displayName || this.props.name }
+                                variant = { 'standard' }
+                            />
+                        );
+                    } }
                 />
             );
         }
@@ -138,32 +144,16 @@ class DeveloperField extends React.Component {
         return (
             <TextField
                 defaultValue = { this.props.value }
-                floatingLabelFixed
-                floatingLabelText = { this.props.displayName || this.props.name }
                 key = { `${ this.props.name }-${ this.props.value }` }
+                label = { this.props.displayName || this.props.name }
                 name = { this.props.name }
                 onKeyUp = { this.handleValueChange }
-                underlineShow = { false }
+                variant = { 'standard' }
             />
         );
     }
 
     render () {
-        const actions = [
-            <FlatButton
-                key = 'cancel-delete'
-                label = { 'No' }
-                onTouchTap = { this.handleCancelClick }
-                primary
-            />,
-            <FlatButton
-                key = 'confirm-delete'
-                label = { 'Yes' }
-                onTouchTap = { this.handleDelete }
-                primary
-            />,
-        ];
-
         return (
             <div
                 style = { styles.wrapper }
@@ -174,19 +164,19 @@ class DeveloperField extends React.Component {
                         if ( this.state.newValue !== false ) {
                             return (
                                 <IconButton
-                                    onTouchTap = { this.handleSave }
+                                    onClick = { this.handleSave }
                                     style = { styles.actionButton }
                                 >
-                                    <ContentSave />
+                                    <SaveIcon />
                                 </IconButton>
                             );
                         } else if ( this.props.delete ) {
                             return (
                                 <IconButton
-                                    onTouchTap = { this.handleDeleteClick }
+                                    onClick = { this.handleDeleteClick }
                                     style = { styles.actionButton }
                                 >
-                                    <ActionDelete />
+                                    <DeleteIcon />
                                 </IconButton>
                             );
                         }
@@ -195,12 +185,28 @@ class DeveloperField extends React.Component {
                     } )()
                 }
                 <Dialog
-                    actions = { actions }
-                    modal = { false }
-                    onRequestClose = { this.handleClose }
+                    onClose = { this.handleCancelClick }
                     open = { this.state.confirmOpen }
                 >
-                    { `Are you sure you want to delete "${ this.props.name }-${ this.props.value }" ?` }
+                    <DialogContent>
+                        { `Are you sure you want to delete "${ this.props.name }-${ this.props.value }" ?` }
+                    </DialogContent>
+                    <DialogActions>
+                        <Button
+                            color = { 'primary' }
+                            key = 'cancel-delete'
+                            onClick = { this.handleCancelClick }
+                        >
+                            { 'No' }
+                        </Button>
+                        <Button
+                            color = { 'primary' }
+                            key = 'confirm-delete'
+                            onClick = { this.handleDelete }
+                        >
+                            { 'Yes' }
+                        </Button>
+                    </DialogActions>
                 </Dialog>
                 <Divider
                     key = { `${ this.props.name }-${ this.props.value }-divider` }

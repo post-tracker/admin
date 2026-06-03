@@ -1,22 +1,31 @@
 import React from 'react';
 import PropTypes from 'prop-types';
 
-import Paper from 'material-ui/Paper';
-import Toggle from 'material-ui/Toggle';
+import Paper from '@mui/material/Paper';
+import Switch from '@mui/material/Switch';
+import FormControlLabel from '@mui/material/FormControlLabel';
 
 import AddService from './AddService.jsx';
 import DeveloperField from './DeveloperField.jsx';
 import api from './api.js';
 
 const styles = {
-    activeWrapper: {
-        float: 'right',
+    header: {
+        alignItems: 'center',
+        display: 'flex',
+        gap: 12,
+        justifyContent: 'space-between',
+        marginBottom: 10,
+    },
+    title: {
+        margin: 0,
     },
     wrapper: {
-        margin: 15,
-        padding: '15px 30px',
+        boxSizing: 'border-box',
+        margin: 0,
+        padding: '20px 30px',
         position: 'relative',
-        // width: 350,
+        width: 340,
     },
 };
 
@@ -60,22 +69,28 @@ class Developer extends React.PureComponent {
     render () {
         return (
             <Paper
-                rounded = { false }
+                elevation = { 1 }
+                square
                 style = { styles.wrapper }
-                zDepth = { 1 }
             >
-                <h3>
-                    { `${ this.props.nick || this.props.name } - ${ this.props.id }` }
-                    <div
-                        style = { styles.activeWrapper }
+                <div
+                    style = { styles.header }
+                >
+                    <h3
+                        style = { styles.title }
                     >
-                        <Toggle
-                            defaultToggled = { this.props.active }
-                            label = { 'Active' }
-                            onToggle = { this.handleActiveToggle }
-                        />
-                    </div>
-                </h3>
+                        { `${ this.props.nick || this.props.name } - ${ this.props.id }` }
+                    </h3>
+                    <FormControlLabel
+                        control = {
+                            <Switch
+                                defaultChecked = { Boolean( this.props.active ) }
+                                onChange = { this.handleActiveToggle }
+                            />
+                        }
+                        label = { 'Active' }
+                    />
+                </div>
                 <DeveloperField
                     displayName = { 'Nick' }
                     gameId = { this.props.gameId }
@@ -145,7 +160,7 @@ Developer.propTypes = {
             ),
         ]
     ).isRequired,
-    active: PropTypes.bool,
+    active: PropTypes.oneOfType( [ PropTypes.bool, PropTypes.number ] ),
     availableGroups: PropTypes.arrayOf( PropTypes.string ),
     availableServices: PropTypes.arrayOf( PropTypes.string ),
     gameId: PropTypes.string.isRequired,

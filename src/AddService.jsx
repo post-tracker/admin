@@ -1,12 +1,12 @@
 import React from 'react';
 import PropTypes from 'prop-types';
 
-import Divider from 'material-ui/Divider';
-import TextField from 'material-ui/TextField';
-import FloatingActionButton from 'material-ui/FloatingActionButton';
-import ContentAdd from 'material-ui/svg-icons/content/add';
-import RaisedButton from 'material-ui/RaisedButton';
-import AutoComplete from 'material-ui/AutoComplete';
+import Divider from '@mui/material/Divider';
+import TextField from '@mui/material/TextField';
+import Fab from '@mui/material/Fab';
+import Button from '@mui/material/Button';
+import Autocomplete from '@mui/material/Autocomplete';
+import AddIcon from '@mui/icons-material/Add';
 
 import api from './api.js';
 
@@ -17,6 +17,11 @@ const styles = {
     addAccountWrapper: {
         marginTop: 20,
         textAlign: 'center',
+    },
+    // Fields must opt out of the wrapper's centered text so their labels and
+    // values align left like every other field in the card.
+    formField: {
+        textAlign: 'left',
     },
     saveAccountButton: {
         marginRight: 12,
@@ -84,15 +89,28 @@ class AddService extends React.Component {
 
         if ( this.state.isOpen ) {
             returnNodes.push(
-                <AutoComplete
-                    dataSource = { this.props.availableServices }
-                    filter = { AutoComplete.noFilter }
-                    floatingLabelFixed
-                    floatingLabelText = { 'Service' }
+                <Autocomplete
+                    filterOptions = { ( options ) => {
+                        return options;
+                    } }
+                    freeSolo
+                    fullWidth
                     key = { 'add-account-service' }
-                    onUpdateInput = { this.handleServiceChange }
+                    onInputChange = { ( event, value ) => {
+                        this.handleServiceChange( value );
+                    } }
                     openOnFocus
-                    underlineShow = { false }
+                    options = { this.props.availableServices }
+                    renderInput = { ( params ) => {
+                        return (
+                            <TextField
+                                { ...params }
+                                label = { 'Service' }
+                                style = { styles.formField }
+                                variant = { 'standard' }
+                            />
+                        );
+                    } }
                 />
             );
             returnNodes.push(
@@ -102,13 +120,13 @@ class AddService extends React.Component {
             );
             returnNodes.push(
                 <TextField
-                    floatingLabelFixed
-                    floatingLabelText = { 'Identifier' }
-                    // hintText = { name }
+                    fullWidth
                     key = { 'add-account-identifier' }
+                    label = { 'Identifier' }
                     name = { 'identifier' }
                     onKeyUp = { this.handleKeyUp }
-                    underlineShow = { false }
+                    style = { styles.formField }
+                    variant = { 'standard' }
                 />
             );
             returnNodes.push(
@@ -121,30 +139,34 @@ class AddService extends React.Component {
                     key = { 'add-account-buttons-wrapper' }
                     style = { styles.addAccountButtonsWrapper }
                 >
-                    <RaisedButton
+                    <Button
+                        color = { 'primary' }
                         key = { 'add-account-save-button' }
-                        label = { 'Save' }
-                        onTouchTap = { this.handleSave }
-                        primary
+                        onClick = { this.handleSave }
                         style = { styles.saveAccountButton }
-                    />
-                    <RaisedButton
+                        variant = { 'contained' }
+                    >
+                        { 'Save' }
+                    </Button>
+                    <Button
+                        color = { 'secondary' }
                         key = { 'add-account-cancel-button' }
-                        label = { 'Cancel' }
-                        onTouchTap = { this.handleToggle }
-                        secondary
-                    />
+                        onClick = { this.handleToggle }
+                        variant = { 'contained' }
+                    >
+                        { 'Cancel' }
+                    </Button>
                 </div>
             );
         } else {
             returnNodes.push(
-                <FloatingActionButton
+                <Fab
                     key = { 'add-account-toggle-button' }
-                    mini
-                    onTouchTap = { this.handleToggle }
+                    onClick = { this.handleToggle }
+                    size = { 'small' }
                 >
-                    <ContentAdd />
-                </FloatingActionButton>
+                    <AddIcon />
+                </Fab>
             );
         }
 
