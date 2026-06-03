@@ -35,7 +35,7 @@ export default [
         },
     },
     {
-        files: [ 'server.js', 'vite.config.js', 'eslint.config.js' ],
+        files: [ 'server.js', 'queues.js', 'vite.config.js', 'eslint.config.js' ],
         languageOptions: {
             ecmaVersion: 'latest',
             sourceType: 'module',

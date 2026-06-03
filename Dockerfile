@@ -20,6 +20,7 @@ COPY package*.json ./
 RUN npm ci --omit=dev
 
 COPY server.js ./
+COPY queues.js ./
 COPY --from=builder /usr/src/app/web ./web
 
 EXPOSE 4000

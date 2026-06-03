@@ -1,4 +1,5 @@
 import React from 'react';
+import PropTypes from 'prop-types';
 import deepEqual from 'deep-equal';
 import cookie from 'react-cookies';
 import alphanumSort from 'alphanum-sort';
@@ -14,6 +15,7 @@ import Developer from './Developer.jsx';
 import GameInfo from './GameInfo.jsx';
 import AddDeveloper from './AddDeveloper.jsx';
 import AddGame from './AddGame.jsx';
+import NavTabs from './NavTabs.jsx';
 import api from './api.js';
 
 const INIT_LOAD_WAIT_TIMEOUT = 100;
@@ -324,6 +326,10 @@ class Games extends React.Component {
                     position = { 'static' }
                 >
                     <Toolbar>
+                        <NavTabs
+                            onNavigate = { this.props.onNavigate }
+                            view = { 'games' }
+                        />
                         <Typography
                             component = { 'div' }
                             noWrap
@@ -401,5 +407,9 @@ class Games extends React.Component {
 }
 
 Games.displayName = 'Games';
+
+Games.propTypes = {
+    onNavigate: PropTypes.func.isRequired,
+};
 
 export default Games;

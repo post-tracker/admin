@@ -2,6 +2,8 @@ import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
 import dotenv from 'dotenv';
 
+import { getQueueCounts } from './queues.js';
+
 // Load the same .env the production server (server.js) uses, so the dev
 // /api-token endpoint below can hand out the real token.
 dotenv.config();
@@ -13,6 +15,27 @@ const apiTokenPlugin = {
     configureServer ( server ) {
         server.middlewares.use( '/api-token', ( request, response ) => {
             response.end( process.env.API_TOKEN || '' );
+        } );
+    },
+};
+
+// Mirrors server.js's /api/queues route in dev so the dashboard's queue panel
+// works under `vite`. Returns [] when no REDIS_URL is set (no local Redis).
+const apiQueuesPlugin = {
+    name: 'dev-api-queues',
+    configureServer ( server ) {
+        server.middlewares.use( '/api/queues', async ( request, response ) => {
+            try {
+                const data = await getQueueCounts();
+
+                response.setHeader( 'Content-Type', 'application/json' );
+                response.end( JSON.stringify( data ) );
+            } catch ( queuesError ) {
+                response.statusCode = 500;
+                response.end( JSON.stringify( {
+                    error: queuesError.message,
+                } ) );
+            }
         } );
     },
 };
@@ -43,6 +66,7 @@ export default defineConfig( {
     plugins: [
         react(),
         apiTokenPlugin,
+        apiQueuesPlugin,
     ],
     build: {
         // Build into web/, which server.js serves statically in production.

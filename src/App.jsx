@@ -1,8 +1,21 @@
+import { useState } from 'react';
 import { createRoot } from 'react-dom/client';
 import { ThemeProvider, createTheme } from '@mui/material/styles';
 import CssBaseline from '@mui/material/CssBaseline';
 
+import Dashboard from './Dashboard.jsx';
 import Games from './Games.jsx';
+import Tokens from './Tokens.jsx';
+
+// Land on the Games manager (not the Dashboard) when arriving via the
+// ?action=add-dev deep link so that prefill flow still works.
+const initialView = function initialView () {
+    if ( typeof window !== 'undefined' && window.location.search.includes( 'action=add-dev' ) ) {
+        return 'games';
+    }
+
+    return 'dashboard';
+};
 
 const theme = createTheme( {
     palette: {
@@ -31,10 +44,26 @@ const theme = createTheme( {
 } );
 
 const App = () => {
+    const [ view, setView ] = useState( initialView );
+
     return (
         <ThemeProvider theme = { theme }>
             <CssBaseline />
-            <Games />
+            { view === 'dashboard' &&
+                <Dashboard
+                    onNavigate = { setView }
+                />
+            }
+            { view === 'games' &&
+                <Games
+                    onNavigate = { setView }
+                />
+            }
+            { view === 'tokens' &&
+                <Tokens
+                    onNavigate = { setView }
+                />
+            }
         </ThemeProvider>
     );
 };

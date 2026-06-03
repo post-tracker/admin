@@ -48,7 +48,14 @@ const post = function post ( requestPath, item ) {
         method: 'POST',
     } )
         .then( ( response ) => {
-            ensureOk( response, requestPath );
+            return ensureOk( response, requestPath );
+        } )
+        .then( ( response ) => {
+            return response.text();
+        } )
+        .then( ( text ) => {
+            // Tolerate empty bodies (most POSTs return nothing); parse JSON when present.
+            return text ? JSON.parse( text ) : null;
         } );
 };
 
