@@ -1,7 +1,6 @@
 import React from 'react';
 import PropTypes from 'prop-types';
 
-import AppBar from '@mui/material/AppBar';
 import Alert from '@mui/material/Alert';
 import Box from '@mui/material/Box';
 import Button from '@mui/material/Button';
@@ -21,12 +20,11 @@ import TableCell from '@mui/material/TableCell';
 import TableHead from '@mui/material/TableHead';
 import TableRow from '@mui/material/TableRow';
 import TextField from '@mui/material/TextField';
-import Toolbar from '@mui/material/Toolbar';
 import Typography from '@mui/material/Typography';
 import AddIcon from '@mui/icons-material/Add';
 import DeleteIcon from '@mui/icons-material/Delete';
 
-import NavTabs from './NavTabs.jsx';
+import Header from './Header.jsx';
 import api from './api.js';
 
 const TOKEN_WAIT_TIMEOUT = 100;
@@ -410,23 +408,8 @@ class Tokens extends React.Component {
     render () {
         return (
             <div>
-                <AppBar
-                    color = { 'default' }
-                    position = { 'static' }
-                >
-                    <Toolbar>
-                        <NavTabs
-                            onNavigate = { this.props.onNavigate }
-                            view = { 'tokens' }
-                        />
-                        <Typography
-                            sx = { {
-                                flexGrow: 1,
-                            } }
-                            variant = { 'h6' }
-                        >
-                            { 'Tokens' }
-                        </Typography>
+                <Header
+                    actions = {
                         <Button
                             color = { 'inherit' }
                             onClick = { this.handleOpenCreate }
@@ -434,8 +417,10 @@ class Tokens extends React.Component {
                         >
                             { 'New token' }
                         </Button>
-                    </Toolbar>
-                </AppBar>
+                    }
+                    onNavigate = { this.props.onNavigate }
+                    view = { 'tokens' }
+                />
                 <Box
                     sx = { {
                         m: '0 auto',

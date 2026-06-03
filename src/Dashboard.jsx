@@ -1,16 +1,14 @@
 import React from 'react';
 import PropTypes from 'prop-types';
 
-import AppBar from '@mui/material/AppBar';
 import Alert from '@mui/material/Alert';
 import Box from '@mui/material/Box';
 import CircularProgress from '@mui/material/CircularProgress';
 import Paper from '@mui/material/Paper';
-import Toolbar from '@mui/material/Toolbar';
 import Tooltip from '@mui/material/Tooltip';
 import Typography from '@mui/material/Typography';
 
-import NavTabs from './NavTabs.jsx';
+import Header from './Header.jsx';
 import api from './api.js';
 
 const TOKEN_WAIT_TIMEOUT = 100;
@@ -463,22 +461,10 @@ class Dashboard extends React.Component {
     render () {
         return (
             <div>
-                <AppBar
-                    color = { 'default' }
-                    position = { 'static' }
-                >
-                    <Toolbar>
-                        <NavTabs
-                            onNavigate = { this.props.onNavigate }
-                            view = { 'dashboard' }
-                        />
-                        <Typography
-                            variant = { 'h6' }
-                        >
-                            { 'Dashboard' }
-                        </Typography>
-                    </Toolbar>
-                </AppBar>
+                <Header
+                    onNavigate = { this.props.onNavigate }
+                    view = { 'dashboard' }
+                />
                 <Box
                     sx = { {
                         m: '0 auto',

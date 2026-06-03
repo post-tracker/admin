@@ -4,18 +4,15 @@ import deepEqual from 'deep-equal';
 import cookie from 'react-cookies';
 import alphanumSort from 'alphanum-sort';
 
-import AppBar from '@mui/material/AppBar';
 import Autocomplete from '@mui/material/Autocomplete';
 import Snackbar from '@mui/material/Snackbar';
 import TextField from '@mui/material/TextField';
-import Toolbar from '@mui/material/Toolbar';
-import Typography from '@mui/material/Typography';
 
 import Developer from './Developer.jsx';
 import GameInfo from './GameInfo.jsx';
 import AddDeveloper from './AddDeveloper.jsx';
 import AddGame from './AddGame.jsx';
-import NavTabs from './NavTabs.jsx';
+import Header from './Header.jsx';
 import api from './api.js';
 
 const INIT_LOAD_WAIT_TIMEOUT = 100;
@@ -321,57 +318,41 @@ class Games extends React.Component {
 
         return (
             <div>
-                <AppBar
-                    color = { 'default' }
-                    position = { 'static' }
-                >
-                    <Toolbar>
-                        <NavTabs
-                            onNavigate = { this.props.onNavigate }
-                            view = { 'games' }
-                        />
-                        <Typography
-                            component = { 'div' }
-                            noWrap
-                            sx = { {
-                                flexShrink: 0,
-                                mr: 2,
-                            } }
-                            variant = { 'h6' }
-                        >
-                            { currentGame ? currentGame.name : 'Admin' }
-                        </Typography>
-                        <Autocomplete
-                            disableClearable
-                            getOptionLabel = { ( game ) => {
-                                return game.name || '';
-                            } }
-                            isOptionEqualToValue = { ( option, value ) => {
-                                return option.identifier === value.identifier;
-                            } }
-                            onChange = { this.handleGamePick }
-                            options = { this.state.games }
-                            renderInput = { ( params ) => {
-                                return (
-                                    <TextField
-                                        { ...params }
-                                        label = { 'Switch game' }
-                                        size = { 'small' }
-                                        variant = { 'outlined' }
-                                    />
-                                );
-                            } }
-                            sx = { {
-                                flexGrow: 1,
-                                maxWidth: 400,
-                                minWidth: 0,
-                                mr: 2,
-                            } }
-                            value = { currentGame }
-                        />
-                        <AddGame />
-                    </Toolbar>
-                </AppBar>
+                <Header
+                    actions = {
+                        <React.Fragment>
+                            <Autocomplete
+                                disableClearable
+                                getOptionLabel = { ( game ) => {
+                                    return game.name || '';
+                                } }
+                                isOptionEqualToValue = { ( option, value ) => {
+                                    return option.identifier === value.identifier;
+                                } }
+                                onChange = { this.handleGamePick }
+                                options = { this.state.games }
+                                renderInput = { ( params ) => {
+                                    return (
+                                        <TextField
+                                            { ...params }
+                                            label = { 'Switch game' }
+                                            size = { 'small' }
+                                            variant = { 'outlined' }
+                                        />
+                                    );
+                                } }
+                                sx = { {
+                                    mr: 2,
+                                    width: 260,
+                                } }
+                                value = { currentGame }
+                            />
+                            <AddGame />
+                        </React.Fragment>
+                    }
+                    onNavigate = { this.props.onNavigate }
+                    view = { 'games' }
+                />
                 { currentGame &&
                     <GameInfo
                         { ...currentGame }
