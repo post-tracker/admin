@@ -5,6 +5,8 @@ import Alert from '@mui/material/Alert';
 import Box from '@mui/material/Box';
 import CircularProgress from '@mui/material/CircularProgress';
 import Paper from '@mui/material/Paper';
+import ToggleButton from '@mui/material/ToggleButton';
+import ToggleButtonGroup from '@mui/material/ToggleButtonGroup';
 import Tooltip from '@mui/material/Tooltip';
 import Typography from '@mui/material/Typography';
 
@@ -15,6 +17,16 @@ const TOKEN_WAIT_TIMEOUT = 100;
 const STATS_TIMEOUT = 10000;
 const CHART_HEIGHT = 120;
 const QUEUE_FIELDS = [ 'waiting', 'active', 'completed', 'failed', 'delayed' ];
+
+// Rolling windows offered by the per-service breakdown. Keys match the
+// `counts` object returned by /stats so the toggle needs no refetch.
+const TIMEFRAMES = [
+    { key: '24h', label: '24h' },
+    { key: '7d', label: '7d' },
+    { key: '30d', label: '30d' },
+    { key: 'all', label: 'All' },
+];
+const DEFAULT_TIMEFRAME = '7d';
 
 const sectionTitleSx = {
     color: 'text.secondary',
@@ -40,6 +52,7 @@ class Dashboard extends React.Component {
             stats: null,
             statsError: false,
             statsLoading: true,
+            timeframe: DEFAULT_TIMEFRAME,
         };
     }
 
@@ -226,6 +239,123 @@ class Dashboard extends React.Component {
         );
     }
 
+    serviceCount ( entry ) {
+        // New payloads carry a `counts` map per window; tolerate the older
+        // single `count` shape if a stale response is served from cache.
+        if ( entry.counts ) {
+            return entry.counts[ this.state.timeframe ] || 0;
+        }
+
+        return entry.count || 0;
+    }
+
+    renderTimeframeToggle () {
+        return (
+            <ToggleButtonGroup
+                exclusive
+                onChange = { ( event, value ) => {
+                    if ( value ) {
+                        this.setState( {
+                            timeframe: value,
+                        } );
+                    }
+                } }
+                size = { 'small' }
+                value = { this.state.timeframe }
+            >
+                { TIMEFRAMES.map( ( frame ) => {
+                    return (
+                        <ToggleButton
+                            key = { frame.key }
+                            sx = { {
+                                px: 1.5,
+                                py: 0.25,
+                                textTransform: 'none',
+                            } }
+                            value = { frame.key }
+                        >
+                            { frame.label }
+                        </ToggleButton>
+                    );
+                } ) }
+            </ToggleButtonGroup>
+        );
+    }
+
+    renderBars ( rows, labelKey ) {
+        const max = Math.max( ...rows.map( ( row ) => {
+            return row.value;
+        } ), 1 );
+
+        return (
+            <Box
+                sx = { {
+                    display: 'flex',
+                    flexDirection: 'column',
+                    gap: 1,
+                } }
+            >
+                { rows.map( ( row ) => {
+                    return (
+                        <Box
+                            key = { row[ labelKey ] }
+                            sx = { {
+                                alignItems: 'center',
+                                display: 'flex',
+                                gap: 2,
+                            } }
+                        >
+                            <Tooltip
+                                arrow
+                                title = { row[ labelKey ] }
+                            >
+                                <Box
+                                    sx = { {
+                                        color: 'text.secondary',
+                                        flexShrink: 0,
+                                        fontSize: 14,
+                                        overflow: 'hidden',
+                                        textAlign: 'right',
+                                        textOverflow: 'ellipsis',
+                                        whiteSpace: 'nowrap',
+                                        width: 140,
+                                    } }
+                                >
+                                    { row[ labelKey ] }
+                                </Box>
+                            </Tooltip>
+                            <Box
+                                sx = { {
+                                    bgcolor: 'action.hover',
+                                    borderRadius: 1,
+                                    flexGrow: 1,
+                                } }
+                            >
+                                <Box
+                                    sx = { {
+                                        bgcolor: 'primary.main',
+                                        borderRadius: 1,
+                                        height: 20,
+                                        width: `${ Math.max( ( row.value / max ) * 100, 1 ) }%`,
+                                    } }
+                                />
+                            </Box>
+                            <Box
+                                sx = { {
+                                    flexShrink: 0,
+                                    fontSize: 14,
+                                    width: 80,
+                                } }
+                            >
+                                { formatNumber( row.value ) }
+                            </Box>
+                        </Box>
+                    );
+                } ) }
+            </Box>
+        );
+    }
+
     renderPerService () {
         const services = ( this.state.stats && this.state.stats.postsPerService ) || [];
 
@@ -240,69 +370,42 @@ class Dashboard extends React.Component {
             );
         }
 
-        const max = Math.max( ...services.map( ( entry ) => {
-            return entry.count;
-        } ), 1 );
+        const rows = services
+            .map( ( entry ) => {
+                return {
+                    service: entry.service,
+                    value: this.serviceCount( entry ),
+                };
+            } )
+            .sort( ( a, b ) => {
+                return b.value - a.value;
+            } );
 
-        return (
-            <Box
-                sx = { {
-                    display: 'flex',
-                    flexDirection: 'column',
-                    gap: 1,
-                } }
-            >
-                { services.map( ( entry ) => {
-                    return (
-                        <Box
-                            key = { entry.service }
-                            sx = { {
-                                alignItems: 'center',
-                                display: 'flex',
-                                gap: 2,
-                            } }
-                        >
-                            <Box
-                                sx = { {
-                                    color: 'text.secondary',
-                                    flexShrink: 0,
-                                    fontSize: 14,
-                                    textAlign: 'right',
-                                    width: 120,
-                                } }
-                            >
-                                { entry.service }
-                            </Box>
-                            <Box
-                                sx = { {
-                                    bgcolor: 'action.hover',
-                                    borderRadius: 1,
-                                    flexGrow: 1,
-                                } }
-                            >
-                                <Box
-                                    sx = { {
-                                        bgcolor: 'primary.main',
-                                        borderRadius: 1,
-                                        height: 20,
-                                        width: `${ Math.max( ( entry.count / max ) * 100, 1 ) }%`,
-                                    } }
-                                />
-                            </Box>
-                            <Box
-                                sx = { {
-                                    flexShrink: 0,
-                                    fontSize: 14,
-                                    width: 80,
-                                } }
-                            >
-                                { formatNumber( entry.count ) }
-                            </Box>
-                        </Box>
-                    );
-                } ) }
-            </Box>
-        );
+        return this.renderBars( rows, 'service' );
+    }
+
+    renderPerGame () {
+        const games = ( this.state.stats && this.state.stats.postsPerGame ) || [];
+
+        if ( games.length === 0 ) {
+            return (
+                <Typography
+                    color = { 'text.secondary' }
+                    variant = { 'body2' }
+                >
+                    { 'No posts yet.' }
+                </Typography>
+            );
+        }
+
+        const rows = games.map( ( entry ) => {
+            return {
+                name: entry.name,
+                value: entry.count,
+            };
+        } );
+
+        return this.renderBars( rows, 'name' );
     }
 
     renderQueues () {
@@ -405,19 +508,29 @@ class Dashboard extends React.Component {
         );
     }
 
-    renderSection ( title, content ) {
+    renderSection ( title, content, action ) {
         return (
             <Box
                 sx = { {
                     mb: 4,
                 } }
             >
-                <Typography
-                    sx = { sectionTitleSx }
-                    variant = { 'overline' }
+                <Box
+                    sx = { {
+                        alignItems: 'center',
+                        display: 'flex',
+                        justifyContent: 'space-between',
+                        minHeight: 34,
+                    } }
                 >
-                    { title }
-                </Typography>
+                    <Typography
+                        sx = { sectionTitleSx }
+                        variant = { 'overline' }
+                    >
+                        { title }
+                    </Typography>
+                    { action }
+                </Box>
                 { content }
             </Box>
         );
@@ -452,7 +565,8 @@ class Dashboard extends React.Component {
                 }
                 { this.renderSection( 'Totals', this.renderTotals() ) }
                 { this.renderSection( 'Posts over time (30 days)', this.renderOverTime() ) }
-                { this.renderSection( 'Posts per service', this.renderPerService() ) }
+                { this.renderSection( 'Posts per service', this.renderPerService(), this.renderTimeframeToggle() ) }
+                { this.renderSection( 'Posts per game (top 20)', this.renderPerGame() ) }
                 { this.renderSection( 'Queue health', this.renderQueues() ) }
             </Box>
         );
