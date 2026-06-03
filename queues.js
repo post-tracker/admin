@@ -71,6 +71,15 @@ const withTimeout = function withTimeout ( promise, milliseconds ) {
     ] );
 };
 
+// The raw Bull queue instances, sharing the cached Redis connections above so
+// Bull Board (admin/bullBoard.js) doesn't open a second set of clients. Empty
+// when no REDIS_URL is configured.
+export const getQueueInstances = function getQueueInstances () {
+    return getQueues().map( ( { queue } ) => {
+        return queue;
+    } );
+};
+
 export const getQueueCounts = async function getQueueCounts () {
     const queues = getQueues();
 

@@ -3,12 +3,14 @@ import PropTypes from 'prop-types';
 
 import Alert from '@mui/material/Alert';
 import Box from '@mui/material/Box';
+import Button from '@mui/material/Button';
 import CircularProgress from '@mui/material/CircularProgress';
 import Paper from '@mui/material/Paper';
 import ToggleButton from '@mui/material/ToggleButton';
 import ToggleButtonGroup from '@mui/material/ToggleButtonGroup';
 import Tooltip from '@mui/material/Tooltip';
 import Typography from '@mui/material/Typography';
+import OpenInNewIcon from '@mui/icons-material/OpenInNew';
 
 import Header from './Header.jsx';
 import api from './api.js';
@@ -508,6 +510,22 @@ class Dashboard extends React.Component {
         );
     }
 
+    renderQueueManagerLink () {
+        // Bull Board is its own server-rendered app mounted at /queues by the
+        // admin server; open it in a new tab for the full job-inspection UI.
+        return (
+            <Button
+                endIcon = { <OpenInNewIcon /> }
+                href = { '/queues' }
+                rel = { 'noopener' }
+                size = { 'small' }
+                target = { '_blank' }
+            >
+                { 'Open queue manager' }
+            </Button>
+        );
+    }
+
     renderSection ( title, content, action ) {
         return (
             <Box
@@ -567,7 +585,7 @@ class Dashboard extends React.Component {
                 { this.renderSection( 'Posts over time (30 days)', this.renderOverTime() ) }
                 { this.renderSection( 'Posts per service', this.renderPerService(), this.renderTimeframeToggle() ) }
                 { this.renderSection( 'Posts per game (top 20)', this.renderPerGame() ) }
-                { this.renderSection( 'Queue health', this.renderQueues() ) }
+                { this.renderSection( 'Queue health', this.renderQueues(), this.renderQueueManagerLink() ) }
             </Box>
         );
     }

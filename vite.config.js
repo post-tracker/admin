@@ -1,8 +1,12 @@
 import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
 import dotenv from 'dotenv';
+import express from 'express';
 
 import { getQueueCounts } from './queues.js';
+import { createQueuesRouter } from './bullBoard.js';
+
+const QUEUES_BASE_PATH = '/queues';
 
 // Load the same .env the production server (server.js) uses, so the dev
 // /api-token endpoint below can hand out the real token.
@@ -40,6 +44,26 @@ const apiQueuesPlugin = {
     },
 };
 
+// Mirrors server.js's Bull Board mount in dev so /queues works under `vite`.
+// Bull Board's router needs Express semantics (ejs render / express.static), so
+// it's mounted on a tiny Express sub-app rather than directly on Vite's connect
+// stack. Skipped when no REDIS_URL is set (router is null).
+const bullBoardPlugin = {
+    name: 'dev-bull-board',
+    configureServer ( server ) {
+        const router = createQueuesRouter( QUEUES_BASE_PATH );
+
+        if ( !router ) {
+            return;
+        }
+
+        const subApp = express();
+
+        subApp.use( QUEUES_BASE_PATH, router );
+        server.middlewares.use( subApp );
+    },
+};
+
 // When launched through portless, it injects PORT/HOST (the port it proxies to)
 // and PORTLESS_URL (the public https://<name>.localhost address). Honour those so
 // Vite binds where the proxy expects and HMR connects back through it. Without
@@ -67,6 +91,7 @@ export default defineConfig( {
         react(),
         apiTokenPlugin,
         apiQueuesPlugin,
+        bullBoardPlugin,
     ],
     build: {
         // Build into web/, which server.js serves statically in production.

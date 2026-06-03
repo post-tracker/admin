@@ -6,9 +6,11 @@ import express from 'express';
 import cookieParser from 'cookie-parser';
 
 import { getQueueCounts } from './queues.js';
+import { createQueuesRouter } from './bullBoard.js';
 
 const LISTEN_PORT = 4000;
 const INTERNAL_SERVER_ERROR = 500;
+const QUEUES_BASE_PATH = '/queues';
 
 const app = express();
 
@@ -35,6 +37,14 @@ app.get( '/api/queues', async ( request, response ) => {
         } );
     }
 } );
+
+// The full Bull Board UI, behind the same basic auth the rest of the admin sits
+// behind. Only mounted when a REDIS_URL is configured (otherwise null).
+const queuesRouter = createQueuesRouter( QUEUES_BASE_PATH );
+
+if ( queuesRouter ) {
+    app.use( QUEUES_BASE_PATH, queuesRouter );
+}
 
 app.listen( process.env.PORT || LISTEN_PORT, '0.0.0.0', () => {
     console.log( `Admin interface listening on port ${ process.env.PORT || LISTEN_PORT }!` );
