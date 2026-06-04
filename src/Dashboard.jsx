@@ -18,6 +18,8 @@ import api from './api.js';
 const TOKEN_WAIT_TIMEOUT = 100;
 const STATS_TIMEOUT = 10000;
 const CHART_HEIGHT = 120;
+// Queue states shown on the dashboard card, in lifecycle order. The Bull Board
+// UI at /queues (the "Open queue manager" link) is the place to act on them.
 const QUEUE_FIELDS = [ 'waiting', 'active', 'completed', 'failed', 'delayed' ];
 
 // Rolling windows offered by the per-service breakdown. Keys match the
@@ -241,9 +243,10 @@ class Dashboard extends React.Component {
         );
     }
 
-    serviceCount ( entry ) {
-        // New payloads carry a `counts` map per window; tolerate the older
-        // single `count` shape if a stale response is served from cache.
+    windowedCount ( entry ) {
+        // Per-service and per-game payloads both carry a `counts` map keyed by
+        // window; tolerate the older single `count` shape if a stale response is
+        // served from cache.
         if ( entry.counts ) {
             return entry.counts[ this.state.timeframe ] || 0;
         }
@@ -376,7 +379,7 @@ class Dashboard extends React.Component {
             .map( ( entry ) => {
                 return {
                     service: entry.service,
-                    value: this.serviceCount( entry ),
+                    value: this.windowedCount( entry ),
                 };
             } )
             .sort( ( a, b ) => {
@@ -389,23 +392,33 @@ class Dashboard extends React.Component {
     renderPerGame () {
         const games = ( this.state.stats && this.state.stats.postsPerGame ) || [];
 
-        if ( games.length === 0 ) {
+        // Every game is returned now (no top-N cap); the timeframe toggle drives
+        // this list too, so drop games with no posts in the selected window
+        // rather than render a long tail of empty bars.
+        const rows = games
+            .map( ( entry ) => {
+                return {
+                    name: entry.name,
+                    value: this.windowedCount( entry ),
+                };
+            } )
+            .filter( ( row ) => {
+                return row.value > 0;
+            } )
+            .sort( ( a, b ) => {
+                return b.value - a.value;
+            } );
+
+        if ( rows.length === 0 ) {
             return (
                 <Typography
                     color = { 'text.secondary' }
                     variant = { 'body2' }
                 >
-                    { 'No posts yet.' }
+                    { 'No posts in this timeframe.' }
                 </Typography>
             );
         }
-
-        const rows = games.map( ( entry ) => {
-            return {
-                name: entry.name,
-                value: entry.count,
-            };
-        } );
 
         return this.renderBars( rows, 'name' );
     }
@@ -438,7 +451,7 @@ class Dashboard extends React.Component {
                     display: 'grid',
                     gap: 2,
                     gridTemplateColumns: {
-                        sm: 'repeat(2, 1fr)',
+                        md: 'repeat(2, 1fr)',
                         xs: '1fr',
                     },
                 } }
@@ -446,11 +459,11 @@ class Dashboard extends React.Component {
                 { queues.map( ( queue ) => {
                     return (
                         <Paper
+                            elevation = { 2 }
                             key = { queue.name }
                             sx = { {
                                 p: 2,
                             } }
-                            variant = { 'outlined' }
                         >
                             <Typography
                                 sx = { {
@@ -468,42 +481,73 @@ class Dashboard extends React.Component {
                                     { `Unavailable: ${ queue.error }` }
                                 </Typography>
                             }
-                            { !queue.error &&
-                                <Box
-                                    sx = { {
-                                        display: 'flex',
-                                        flexWrap: 'wrap',
-                                        gap: 2,
-                                    } }
-                                >
-                                    { QUEUE_FIELDS.map( ( field ) => {
-                                        return (
-                                            <Box
-                                                key = { field }
-                                            >
-                                                <Typography
-                                                    sx = { {
-                                                        color: field === 'failed' && queue.counts[ field ] > 0
-                                                            ? 'error.main'
-                                                            : 'text.primary',
-                                                        fontWeight: 600,
-                                                    } }
-                                                    variant = { 'h6' }
-                                                >
-                                                    { formatNumber( queue.counts[ field ] ) }
-                                                </Typography>
-                                                <Typography
-                                                    color = { 'text.secondary' }
-                                                    variant = { 'caption' }
-                                                >
-                                                    { field }
-                                                </Typography>
-                                            </Box>
-                                        );
-                                    } ) }
-                                </Box>
-                            }
+                            { !queue.error && this.renderQueueStats( queue ) }
                         </Paper>
+                    );
+                } ) }
+            </Box>
+        );
+    }
+
+    // Each state as a column — count above its label — so the two line up,
+    // with slash separators between columns (failed turns red when > 0). The
+    // slashes sit on the count's baseline via alignItems, so they track the
+    // numbers rather than floating between the two rows.
+    renderQueueStats ( queue ) {
+        return (
+            <Box
+                sx = { {
+                    alignItems: 'baseline',
+                    display: 'flex',
+                    gap: 1,
+                } }
+            >
+                { QUEUE_FIELDS.map( ( field, index ) => {
+                    return (
+                        <React.Fragment
+                            key = { field }
+                        >
+                            { index > 0 &&
+                                <Typography
+                                    component = { 'span' }
+                                    sx = { {
+                                        color: 'text.disabled',
+                                        fontWeight: 600,
+                                    } }
+                                    variant = { 'h5' }
+                                >
+                                    { '/' }
+                                </Typography>
+                            }
+                            <Box
+                                sx = { {
+                                    alignItems: 'center',
+                                    display: 'flex',
+                                    flexDirection: 'column',
+                                } }
+                            >
+                                <Typography
+                                    sx = { {
+                                        color: field === 'failed' && queue.counts[ field ] > 0
+                                            ? 'error.main'
+                                            : 'text.primary',
+                                        fontWeight: 600,
+                                    } }
+                                    variant = { 'h5' }
+                                >
+                                    { formatNumber( queue.counts[ field ] ) }
+                                </Typography>
+                                <Typography
+                                    color = { 'text.secondary' }
+                                    sx = { {
+                                        textTransform: 'capitalize',
+                                    } }
+                                    variant = { 'caption' }
+                                >
+                                    { field }
+                                </Typography>
+                            </Box>
+                        </React.Fragment>
                     );
                 } ) }
             </Box>
@@ -582,10 +626,10 @@ class Dashboard extends React.Component {
                     </Alert>
                 }
                 { this.renderSection( 'Totals', this.renderTotals() ) }
+                { this.renderSection( 'Queue health', this.renderQueues(), this.renderQueueManagerLink() ) }
                 { this.renderSection( 'Posts over time (30 days)', this.renderOverTime() ) }
                 { this.renderSection( 'Posts per service', this.renderPerService(), this.renderTimeframeToggle() ) }
-                { this.renderSection( 'Posts per game (top 20)', this.renderPerGame() ) }
-                { this.renderSection( 'Queue health', this.renderQueues(), this.renderQueueManagerLink() ) }
+                { this.renderSection( 'Posts per game', this.renderPerGame(), this.renderTimeframeToggle() ) }
             </Box>
         );
     }
