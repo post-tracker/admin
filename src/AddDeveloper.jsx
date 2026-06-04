@@ -307,13 +307,30 @@ class AddDeveloper extends React.Component {
                                     variant = { 'standard' }
                                 />
                                 <Divider />
-                                <TextField
-                                    fullWidth
-                                    label = { 'Group' }
-                                    name = { 'group' }
-                                    onKeyUp = { this.handleInputChange }
-                                    placeholder = { 'Group' }
-                                    variant = { 'standard' }
+                                <Autocomplete
+                                    filterOptions = { ( options ) => {
+                                        return options;
+                                    } }
+                                    freeSolo
+                                    inputValue = { String( this.state.group || '' ) }
+                                    onInputChange = { ( event, value ) => {
+                                        this.setState( {
+                                            group: value || false,
+                                        } );
+                                    } }
+                                    openOnFocus
+                                    options = { this.props.availableGroups }
+                                    renderInput = { ( params ) => {
+                                        return (
+                                            <TextField
+                                                { ...params }
+                                                fullWidth
+                                                label = { 'Group' }
+                                                placeholder = { 'Group' }
+                                                variant = { 'standard' }
+                                            />
+                                        );
+                                    } }
                                 />
                                 <Divider />
                                 <TextField
@@ -375,6 +392,7 @@ AddDeveloper.displayName = 'AddDeveloper';
 
 AddDeveloper.defaultProps = {
     availableDevelopers: [],
+    availableGroups: [],
     onSaved: false,
     openOnMount: false,
     prefillIdentifier: false,
@@ -387,6 +405,7 @@ AddDeveloper.propTypes = {
         id: PropTypes.number.isRequired,
         nick: PropTypes.string,
     } ) ),
+    availableGroups: PropTypes.arrayOf( PropTypes.string ),
     gameId: PropTypes.string.isRequired,
     gameNumber: PropTypes.number.isRequired,
     onSaved: PropTypes.oneOfType( [ PropTypes.func, PropTypes.bool ] ),

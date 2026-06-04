@@ -4,6 +4,7 @@ import PropTypes from 'prop-types';
 import Alert from '@mui/material/Alert';
 import Box from '@mui/material/Box';
 import Button from '@mui/material/Button';
+import Chip from '@mui/material/Chip';
 import CircularProgress from '@mui/material/CircularProgress';
 import Paper from '@mui/material/Paper';
 import ToggleButton from '@mui/material/ToggleButton';
@@ -48,8 +49,11 @@ class Dashboard extends React.Component {
         super( props );
 
         this.loadStats = this.loadStats.bind( this );
+        this.loadGames = this.loadGames.bind( this );
 
         this.state = {
+            games: null,
+            gamesError: false,
             queues: null,
             queuesError: false,
             queuesLoading: true,
@@ -62,6 +66,7 @@ class Dashboard extends React.Component {
 
     componentDidMount () {
         this.loadStats();
+        this.loadGames();
         this.loadQueues();
     }
 
@@ -94,6 +99,29 @@ class Dashboard extends React.Component {
                 this.setState( {
                     statsError: statsError.message || 'Failed to load stats',
                     statsLoading: false,
+                } );
+            } );
+    }
+
+    loadGames () {
+        // The "quiet games" section needs the full game list — /stats only
+        // reports games with at least one post ever, so never-posted games
+        // would otherwise be invisible. Wait for the token like loadStats.
+        if ( !window.apiToken ) {
+            setTimeout( this.loadGames, TOKEN_WAIT_TIMEOUT );
+
+            return;
+        }
+
+        api.get( '/games' )
+            .then( ( games ) => {
+                this.setState( {
+                    games: games.data || [],
+                } );
+            } )
+            .catch( ( gamesError ) => {
+                this.setState( {
+                    gamesError: gamesError.message || 'Failed to load games',
                 } );
             } );
     }
@@ -423,6 +451,75 @@ class Dashboard extends React.Component {
         return this.renderBars( rows, 'name' );
     }
 
+    // Inverse of renderPerGame: every tracked game with zero posts in the
+    // selected window. Drives off the full /games list (loadGames) since
+    // postsPerGame omits games that have never posted at all.
+    renderQuietGames () {
+        const games = this.state.games || [];
+
+        if ( games.length === 0 ) {
+            return (
+                <Typography
+                    color = { 'text.secondary' }
+                    variant = { 'body2' }
+                >
+                    { this.state.gamesError
+                        ? `Couldn't load games: ${ this.state.gamesError }`
+                        : 'No games.' }
+                </Typography>
+            );
+        }
+
+        const countsByName = {};
+
+        ( ( this.state.stats && this.state.stats.postsPerGame ) || [] ).forEach( ( entry ) => {
+            countsByName[ entry.name ] = entry;
+        } );
+
+        const quiet = games
+            .map( ( game ) => {
+                return game.name;
+            } )
+            .filter( ( name ) => {
+                return name && this.windowedCount( countsByName[ name ] || {} ) === 0;
+            } )
+            .sort( ( a, b ) => {
+                return a.localeCompare( b );
+            } );
+
+        if ( quiet.length === 0 ) {
+            return (
+                <Typography
+                    color = { 'text.secondary' }
+                    variant = { 'body2' }
+                >
+                    { 'All tracked games have posts in this timeframe.' }
+                </Typography>
+            );
+        }
+
+        return (
+            <Box
+                sx = { {
+                    display: 'flex',
+                    flexWrap: 'wrap',
+                    gap: 1,
+                } }
+            >
+                { quiet.map( ( name ) => {
+                    return (
+                        <Chip
+                            key = { name }
+                            label = { name }
+                            size = { 'small' }
+                            variant = { 'outlined' }
+                        />
+                    );
+                } ) }
+            </Box>
+        );
+    }
+
     renderQueues () {
         if ( this.state.queuesLoading ) {
             return (
@@ -630,6 +727,7 @@ class Dashboard extends React.Component {
                 { this.renderSection( 'Posts over time (30 days)', this.renderOverTime() ) }
                 { this.renderSection( 'Posts per service', this.renderPerService(), this.renderTimeframeToggle() ) }
                 { this.renderSection( 'Posts per game', this.renderPerGame(), this.renderTimeframeToggle() ) }
+                { this.renderSection( 'Quiet games (no posts in timeframe)', this.renderQuietGames(), this.renderTimeframeToggle() ) }
             </Box>
         );
     }

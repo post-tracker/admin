@@ -303,6 +303,7 @@ class Games extends React.Component {
             addNode = (
                 <AddDeveloper
                     availableDevelopers = { developerList }
+                    availableGroups = { this.state.groups }
                     gameId = { this.state.gameId }
                     gameNumber = { this.state.gameNumber }
                     onSaved = { prefillActive ? this.handleAddDevSaved : false }
