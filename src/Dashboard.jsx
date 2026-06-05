@@ -451,9 +451,44 @@ class Dashboard extends React.Component {
         return this.renderBars( rows, 'name' );
     }
 
+    // True when a game has been explicitly taken off the public site
+    // (config.live defined and falsy). Mirrors the rest-api /games gate
+    // (server.js ~708); a game with live undefined defaults to live.
+    isGameDisabled ( game ) {
+        return Boolean(
+            game.config && typeof game.config.live !== 'undefined' && !game.config.live
+        );
+    }
+
+    renderQuietChips ( names, disabled ) {
+        return (
+            <Box
+                sx = { {
+                    display: 'flex',
+                    flexWrap: 'wrap',
+                    gap: 1,
+                } }
+            >
+                { names.map( ( name ) => {
+                    return (
+                        <Chip
+                            key = { name }
+                            label = { name }
+                            size = { 'small' }
+                            sx = { disabled ? { opacity: 0.55 } : undefined }
+                            variant = { 'outlined' }
+                        />
+                    );
+                } ) }
+            </Box>
+        );
+    }
+
     // Inverse of renderPerGame: every tracked game with zero posts in the
     // selected window. Drives off the full /games list (loadGames) since
-    // postsPerGame omits games that have never posted at all.
+    // postsPerGame omits games that have never posted at all. Disabled games
+    // (taken off the public site) are split into their own group so the live
+    // list stays focused on games that are supposed to be posting.
     renderQuietGames () {
         const games = this.state.games || [];
 
@@ -476,18 +511,15 @@ class Dashboard extends React.Component {
             countsByName[ entry.name ] = entry;
         } );
 
-        const quiet = games
-            .map( ( game ) => {
-                return game.name;
-            } )
-            .filter( ( name ) => {
-                return name && this.windowedCount( countsByName[ name ] || {} ) === 0;
+        const quietGames = games
+            .filter( ( game ) => {
+                return game.name && this.windowedCount( countsByName[ game.name ] || {} ) === 0;
             } )
             .sort( ( a, b ) => {
-                return a.localeCompare( b );
+                return a.name.localeCompare( b.name );
             } );
 
-        if ( quiet.length === 0 ) {
+        if ( quietGames.length === 0 ) {
             return (
                 <Typography
                     color = { 'text.secondary' }
@@ -498,24 +530,54 @@ class Dashboard extends React.Component {
             );
         }
 
+        const liveNames = quietGames
+            .filter( ( game ) => {
+                return !this.isGameDisabled( game );
+            } )
+            .map( ( game ) => {
+                return game.name;
+            } );
+
+        const disabledNames = quietGames
+            .filter( ( game ) => {
+                return this.isGameDisabled( game );
+            } )
+            .map( ( game ) => {
+                return game.name;
+            } );
+
         return (
             <Box
                 sx = { {
                     display: 'flex',
-                    flexWrap: 'wrap',
-                    gap: 1,
+                    flexDirection: 'column',
+                    gap: 2,
                 } }
             >
-                { quiet.map( ( name ) => {
-                    return (
-                        <Chip
-                            key = { name }
-                            label = { name }
-                            size = { 'small' }
-                            variant = { 'outlined' }
-                        />
-                    );
-                } ) }
+                { liveNames.length > 0
+                    ? this.renderQuietChips( liveNames, false )
+                    : <Typography
+                        color = { 'text.secondary' }
+                        variant = { 'body2' }
+                    >
+                        { 'No active games are quiet in this timeframe.' }
+                    </Typography>
+                }
+                { disabledNames.length > 0 &&
+                    <Box>
+                        <Typography
+                            color = { 'text.secondary' }
+                            sx = { {
+                                display: 'block',
+                                mb: 1,
+                            } }
+                            variant = { 'caption' }
+                        >
+                            { `Disabled (${ disabledNames.length })` }
+                        </Typography>
+                        { this.renderQuietChips( disabledNames, true ) }
+                    </Box>
+                }
             </Box>
         );
     }
