@@ -299,7 +299,7 @@ class GameInfo extends React.Component {
                                 onChange = { this.handleLiveToggle }
                             />
                         }
-                        label = { this.state.live ? 'Live' : 'Offline' }
+                        label = { this.state.live ? 'Indexing' : 'Disabled' }
                         labelPlacement = { 'start' }
                     />
                 </Box>
