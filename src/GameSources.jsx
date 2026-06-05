@@ -35,23 +35,23 @@ import DeleteIcon from '@mui/icons-material/Delete';
 // new grunt/peon pipeline (queue-users lowercases/dashes it). The list is the
 // union of both registries; values use each registry's canonical spelling.
 const KNOWN_SOURCE_TYPES = [
-    'Strapi',
-    'RSS',
     'BattleNet',
     'Bungie.net',
     'CommLink',
     'Discourse',
     'Instagram',
     'InvisionPowerBoard',
-    'MiggyRSS',
     'rsi',
+    'RSS',
     'SimpleMachinesForum',
     'Steam',
+    'Strapi',
     'Twitter',
 ];
 
 const KNOWN_SOURCE_FIELDS = [
     { key: 'type', kind: 'type' },
+    { key: 'label', kind: 'text' },
     { key: 'endpoint', kind: 'text' },
     { key: 'allowedSections', kind: 'list' },
     { key: 'disallowedSections', kind: 'list' },
@@ -168,9 +168,17 @@ class GameSources extends React.Component {
             return;
         }
 
-        this.updateService( name, {
-            allowedSections: [],
-        } );
+        // Seed every known field with its type-appropriate default so a new
+        // source shows the full form up front. The source is keyed by its
+        // type, so seed `type` to the chosen value. Unwanted fields can be
+        // removed, custom ones still added via "Add field".
+        const seeded = {};
+
+        for ( const field of KNOWN_SOURCE_FIELDS ) {
+            seeded[ field.key ] = field.key === 'type' ? name : defaultForKind( field.kind );
+        }
+
+        this.updateService( name, seeded );
 
         this.setState( {
             activeService: name,
@@ -501,6 +509,13 @@ class GameSources extends React.Component {
         const services = Object.keys( this.props.sources );
         const currentService = this.getCurrentService();
 
+        // Types not yet used as a source key on this game — the menu of sources
+        // you can still add (each source is keyed by its type, so a type can
+        // only be added once).
+        const availableTypes = KNOWN_SOURCE_TYPES.filter( ( typeName ) => {
+            return !Reflect.apply( {}.hasOwnProperty, this.props.sources, [ typeName ] );
+        } );
+
         return (
             <Box>
                 <Typography
@@ -565,26 +580,34 @@ class GameSources extends React.Component {
                         } }
                     >
                         <TextField
+                            disabled = { availableTypes.length === 0 }
                             label = { 'New source' }
                             onChange = { ( event ) => {
                                 this.setState( {
                                     newService: event.target.value,
                                 } );
                             } }
-                            onKeyDown = { ( event ) => {
-                                if ( event.key === 'Enter' ) {
-                                    event.preventDefault();
-                                    this.handleAddService();
-                                }
-                            } }
+                            select
                             size = { 'small' }
                             sx = { {
                                 width: 160,
                             } }
                             value = { this.state.newService }
                             variant = { 'outlined' }
-                        />
+                        >
+                            { availableTypes.map( ( typeName ) => {
+                                return (
+                                    <MenuItem
+                                        key = { typeName }
+                                        value = { typeName }
+                                    >
+                                        { typeName }
+                                    </MenuItem>
+                                );
+                            } ) }
+                        </TextField>
                         <Button
+                            disabled = { !this.state.newService }
                             onClick = { this.handleAddService }
                             startIcon = { <AddIcon /> }
                         >
