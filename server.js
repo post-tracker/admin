@@ -46,6 +46,16 @@ if ( queuesRouter ) {
     app.use( QUEUES_BASE_PATH, queuesRouter );
 }
 
+// SPA fallback: the client uses BrowserRouter (clean paths like /games), so a
+// direct hit or refresh on a client route must return the built shell rather
+// than 404. This runs only for requests not matched above — real assets
+// (express.static), /api-token, /api/queues, and /queues are all registered
+// earlier, so the router takes only what's left. (Express 5 requires the
+// wildcard to be named, hence '*splat' rather than '*'.)
+app.get( '*splat', ( request, response ) => {
+    response.sendFile( path.join( import.meta.dirname, 'web', 'index.html' ) );
+} );
+
 app.listen( process.env.PORT || LISTEN_PORT, '0.0.0.0', () => {
     console.log( `Admin interface listening on port ${ process.env.PORT || LISTEN_PORT }!` );
 } );

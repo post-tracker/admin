@@ -232,7 +232,12 @@ class Dashboard extends React.Component {
                         alignItems: 'flex-end',
                         display: 'flex',
                         gap: '2px',
-                        height: CHART_HEIGHT,
+                        // Taller on mobile, where vertical space is cheap and a
+                        // 120px chart reads as a thin strip.
+                        height: {
+                            sm: CHART_HEIGHT,
+                            xs: 180,
+                        },
                     } }
                 >
                     { series.map( ( point ) => {
@@ -335,7 +340,10 @@ class Dashboard extends React.Component {
                             sx = { {
                                 alignItems: 'center',
                                 display: 'flex',
-                                gap: 2,
+                                gap: {
+                                    sm: 2,
+                                    xs: 1,
+                                },
                             } }
                         >
                             <Tooltip
@@ -351,7 +359,12 @@ class Dashboard extends React.Component {
                                         textAlign: 'right',
                                         textOverflow: 'ellipsis',
                                         whiteSpace: 'nowrap',
-                                        width: 140,
+                                        // Narrower label/value columns on mobile so
+                                        // the bar itself gets most of the width.
+                                        width: {
+                                            sm: 140,
+                                            xs: 96,
+                                        },
                                     } }
                                 >
                                     { row[ labelKey ] }
@@ -377,7 +390,10 @@ class Dashboard extends React.Component {
                                 sx = { {
                                     flexShrink: 0,
                                     fontSize: 14,
-                                    width: 80,
+                                    width: {
+                                        sm: 80,
+                                        xs: 52,
+                                    },
                                 } }
                             >
                                 { formatNumber( row.value ) }
@@ -786,10 +802,10 @@ class Dashboard extends React.Component {
                 }
                 { this.renderSection( 'Totals', this.renderTotals() ) }
                 { this.renderSection( 'Queue health', this.renderQueues(), this.renderQueueManagerLink() ) }
+                { this.renderSection( 'Quiet games (no posts in timeframe)', this.renderQuietGames(), this.renderTimeframeToggle() ) }
                 { this.renderSection( 'Posts over time (30 days)', this.renderOverTime() ) }
                 { this.renderSection( 'Posts per service', this.renderPerService(), this.renderTimeframeToggle() ) }
                 { this.renderSection( 'Posts per game', this.renderPerGame(), this.renderTimeframeToggle() ) }
-                { this.renderSection( 'Quiet games (no posts in timeframe)', this.renderQuietGames(), this.renderTimeframeToggle() ) }
             </Box>
         );
     }
@@ -807,7 +823,7 @@ class Dashboard extends React.Component {
                         maxWidth: 1100,
                         p: {
                             sm: 3,
-                            xs: 2,
+                            xs: 1.5,
                         },
                     } }
                 >

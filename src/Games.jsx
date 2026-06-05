@@ -113,6 +113,24 @@ class Games extends React.Component {
         this.getGamesData();
     }
 
+    componentDidUpdate ( prevProps ) {
+        // The selected game lives in the path ('/games/:gameId'). When it changes
+        // — via the switcher (which navigates), or browser back/forward — load the
+        // newly-targeted game, provided it's one we know about.
+        const nextGameId = this.props.routeGameId;
+
+        if (
+            nextGameId &&
+            nextGameId !== prevProps.routeGameId &&
+            nextGameId !== this.state.gameId &&
+            this.state.games.some( ( game ) => {
+                return game.identifier === nextGameId;
+            } )
+        ) {
+            this.selectGame( nextGameId );
+        }
+    }
+
     shouldComponentUpdate ( nextProps, nextState ) {
         if ( !deepEqual( this.props, nextProps ) ) {
             return true;
@@ -138,7 +156,17 @@ class Games extends React.Component {
     }
 
     handleGamePick ( event, game ) {
-        if ( game && game.identifier ) {
+        if ( !game || !game.identifier ) {
+            return;
+        }
+
+        // Drive selection through the URL so the choice is deep-linkable and
+        // back/forward works; the routeGameId prop change then loads the game
+        // (see componentDidUpdate). Fall back to a direct select if rendered
+        // without the router wrapper.
+        if ( this.props.onSelectGame ) {
+            this.props.onSelectGame( game.identifier );
+        } else {
             this.selectGame( game.identifier );
         }
     }
@@ -215,7 +243,11 @@ class Games extends React.Component {
         api.get( '/games' )
             .then( ( games ) => {
                 let currentGame = games.data[ 0 ];
-                const preferredGameId = ( this.state.prefill && this.state.prefill.game ) || cookie.load( 'gameId' );
+                // The URL param wins (deep link to /games/:gameId), then the
+                // add-dev prefill target, then the last-used cookie.
+                const preferredGameId = this.props.routeGameId ||
+                    ( this.state.prefill && this.state.prefill.game ) ||
+                    cookie.load( 'gameId' );
 
                 if ( preferredGameId ) {
                     for ( let i = 0; i < games.data.length; i = i + 1 ) {
@@ -395,6 +427,8 @@ Games.displayName = 'Games';
 
 Games.propTypes = {
     onNavigate: PropTypes.func.isRequired,
+    onSelectGame: PropTypes.func,
+    routeGameId: PropTypes.oneOfType( [ PropTypes.string, PropTypes.bool ] ),
 };
 
 export default Games;
