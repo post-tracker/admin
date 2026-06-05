@@ -36,6 +36,7 @@ import DeleteIcon from '@mui/icons-material/Delete';
 // union of both registries; values use each registry's canonical spelling.
 const KNOWN_SOURCE_TYPES = [
     'Strapi',
+    'RSS',
     'BattleNet',
     'Bungie.net',
     'CommLink',
