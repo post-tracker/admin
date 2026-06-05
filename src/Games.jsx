@@ -88,6 +88,7 @@ class Games extends React.Component {
 
         return {
             game: game,
+            group: params.get( 'group' ) || false,
             identifier: identifier,
             name: params.get( 'name' ) || identifier,
             service: service,
@@ -308,6 +309,7 @@ class Games extends React.Component {
                     gameNumber = { this.state.gameNumber }
                     onSaved = { prefillActive ? this.handleAddDevSaved : false }
                     openOnMount = { prefillActive }
+                    prefillGroup = { prefillActive ? this.state.prefill.group : false }
                     prefillIdentifier = { prefillActive ? this.state.prefill.identifier : false }
                     prefillName = { prefillActive ? this.state.prefill.name : false }
                     prefillService = { prefillActive ? this.state.prefill.service : false }

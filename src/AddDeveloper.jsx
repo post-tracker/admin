@@ -31,6 +31,7 @@ class AddDeveloper extends React.Component {
             this.props.prefillName !== prevProps.prefillName
             || this.props.prefillService !== prevProps.prefillService
             || this.props.prefillIdentifier !== prevProps.prefillIdentifier
+            || this.props.prefillGroup !== prevProps.prefillGroup
             || this.props.openOnMount !== prevProps.openOnMount
         ) {
             this.setState( this.buildInitialState( this.props ) );
@@ -63,7 +64,7 @@ class AddDeveloper extends React.Component {
             existingDeveloperNick: autoMatch
                 ? autoMatch.nick
                 : '',
-            group: false,
+            group: props.prefillGroup || false,
             identifier: props.prefillIdentifier || false,
             name: props.prefillName || false,
             nick: props.prefillName || false,
@@ -395,6 +396,7 @@ AddDeveloper.defaultProps = {
     availableGroups: [],
     onSaved: false,
     openOnMount: false,
+    prefillGroup: false,
     prefillIdentifier: false,
     prefillName: false,
     prefillService: false,
@@ -410,6 +412,7 @@ AddDeveloper.propTypes = {
     gameNumber: PropTypes.number.isRequired,
     onSaved: PropTypes.oneOfType( [ PropTypes.func, PropTypes.bool ] ),
     openOnMount: PropTypes.bool,
+    prefillGroup: PropTypes.oneOfType( [ PropTypes.string, PropTypes.bool ] ),
     prefillIdentifier: PropTypes.oneOfType( [ PropTypes.string, PropTypes.bool ] ),
     prefillName: PropTypes.oneOfType( [ PropTypes.string, PropTypes.bool ] ),
     prefillService: PropTypes.oneOfType( [ PropTypes.string, PropTypes.bool ] ),
