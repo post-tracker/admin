@@ -314,7 +314,14 @@ class AddDeveloper extends React.Component {
                                     } }
                                     freeSolo
                                     inputValue = { String( this.state.group || '' ) }
-                                    onInputChange = { ( event, value ) => {
+                                    onInputChange = { ( event, value, reason ) => {
+                                        // MUI fires an empty 'reset' on mount (no `value` prop
+                                        // to sync from), which would wipe a prefilled group.
+                                        // Only react to real user edits / the clear button.
+                                        if ( reason === 'reset' && !value ) {
+                                            return;
+                                        }
+
                                         this.setState( {
                                             group: value || false,
                                         } );
