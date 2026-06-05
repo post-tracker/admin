@@ -257,6 +257,7 @@ class Games extends React.Component {
             developerNodes.push(
                 <Developer
                     { ...this.state.developers[ developerId ] }
+                    availableDevelopers = { this.state.developers }
                     availableGroups = { this.state.groups }
                     availableServices = { this.state.services }
                     gameId = { this.state.gameId }

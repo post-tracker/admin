@@ -4,6 +4,14 @@ import PropTypes from 'prop-types';
 import Paper from '@mui/material/Paper';
 import Switch from '@mui/material/Switch';
 import FormControlLabel from '@mui/material/FormControlLabel';
+import Autocomplete from '@mui/material/Autocomplete';
+import Button from '@mui/material/Button';
+import Dialog from '@mui/material/Dialog';
+import DialogTitle from '@mui/material/DialogTitle';
+import DialogContent from '@mui/material/DialogContent';
+import DialogContentText from '@mui/material/DialogContentText';
+import DialogActions from '@mui/material/DialogActions';
+import TextField from '@mui/material/TextField';
 
 import AddService from './AddService.jsx';
 import DeveloperField from './DeveloperField.jsx';
@@ -43,6 +51,14 @@ class Developer extends React.PureComponent {
 
         this.getAccounts = this.getAccounts.bind( this );
         this.handleActiveToggle = this.handleActiveToggle.bind( this );
+        this.handleToggleMerge = this.handleToggleMerge.bind( this );
+        this.handleMergeTargetChange = this.handleMergeTargetChange.bind( this );
+        this.handleConfirmMerge = this.handleConfirmMerge.bind( this );
+
+        this.state = {
+            mergeOpen: false,
+            mergeTarget: false,
+        };
     }
 
     getAccounts () {
@@ -74,7 +90,57 @@ class Developer extends React.PureComponent {
             } );
     }
 
+    handleToggleMerge () {
+        this.setState( ( previousState ) => {
+            return {
+                mergeOpen: !previousState.mergeOpen,
+                mergeTarget: false,
+            };
+        } );
+    }
+
+    handleMergeTargetChange ( event, value ) {
+        this.setState( {
+            mergeTarget: value || false,
+        } );
+    }
+
+    handleConfirmMerge () {
+        if ( !this.state.mergeTarget ) {
+            return;
+        }
+
+        // The source (this developer) is absorbed into the chosen target: its
+        // accounts move to the target and this developer row is deleted. The
+        // server does the reassign + delete in one transaction.
+        api.post( `/${ this.props.gameId }/developers/${ this.props.id }/merge`, {
+            targetId: this.state.mergeTarget.id,
+        } )
+            .then( () => {
+                this.setState( {
+                    mergeOpen: false,
+                    mergeTarget: false,
+                } );
+
+                window.snackbarText = 'Developer merged';
+                window.dispatchEvent( new Event( 'open-snackbar' ) );
+                window.dispatchEvent( new Event( 'data-update' ) );
+            } )
+            .catch( ( mergeError ) => {
+                window.snackbarText = mergeError.message;
+                window.dispatchEvent( new Event( 'open-snackbar' ) );
+            } );
+    }
+
     render () {
+        // Other developers of this game are the possible merge targets; a
+        // developer can't be merged into itself.
+        const mergeTargets = this.props.availableDevelopers.filter( ( developer ) => {
+            return developer.id !== this.props.id;
+        } );
+
+        const thisLabel = this.props.nick || this.props.name;
+
         return (
             <Paper
                 elevation = { 1 }
@@ -87,7 +153,7 @@ class Developer extends React.PureComponent {
                     <h3
                         style = { styles.title }
                     >
-                        { `${ this.props.nick || this.props.name } - ${ this.props.id }` }
+                        { `${ thisLabel } - ${ this.props.id }` }
                     </h3>
                     <FormControlLabel
                         control = {
@@ -139,6 +205,62 @@ class Developer extends React.PureComponent {
                     developerId = { this.props.id }
                     gameId = { this.props.gameId }
                 />
+                { mergeTargets.length > 0 &&
+                    <Button
+                        color = { 'secondary' }
+                        onClick = { this.handleToggleMerge }
+                        size = { 'small' }
+                        sx = { { mt: 1 } }
+                    >
+                        { 'Merge into…' }
+                    </Button>
+                }
+                <Dialog
+                    fullWidth
+                    onClose = { this.handleToggleMerge }
+                    open = { this.state.mergeOpen }
+                >
+                    <DialogTitle>
+                        { `Merge ${ thisLabel }` }
+                    </DialogTitle>
+                    <DialogContent>
+                        <DialogContentText sx = { { mb: 2 } }>
+                            { `Move ${ thisLabel }'s accounts into the selected developer, then delete ${ thisLabel }. The target keeps its own name, group and role.` }
+                        </DialogContentText>
+                        <Autocomplete
+                            getOptionLabel = { ( option ) => {
+                                return `${ option.nick || option.name } - ${ option.id }`;
+                            } }
+                            onChange = { this.handleMergeTargetChange }
+                            openOnFocus
+                            options = { mergeTargets }
+                            renderInput = { ( params ) => {
+                                return (
+                                    <TextField
+                                        { ...params }
+                                        label = { 'Merge into' }
+                                        variant = { 'standard' }
+                                    />
+                                );
+                            } }
+                            value = { this.state.mergeTarget || null }
+                        />
+                    </DialogContent>
+                    <DialogActions>
+                        <Button
+                            color = { 'secondary' }
+                            onClick = { this.handleToggleMerge }
+                        >
+                            { 'Cancel' }
+                        </Button>
+                        <Button
+                            disabled = { !this.state.mergeTarget }
+                            onClick = { this.handleConfirmMerge }
+                        >
+                            { 'Merge' }
+                        </Button>
+                    </DialogActions>
+                </Dialog>
             </Paper>
         );
     }
@@ -148,6 +270,7 @@ Developer.displayName = 'Developer';
 
 Developer.defaultProps = {
     active: 1,
+    availableDevelopers: [],
     availableGroups: [],
     availableServices: [],
     group: '',
@@ -169,6 +292,11 @@ Developer.propTypes = {
         ]
     ).isRequired,
     active: PropTypes.oneOfType( [ PropTypes.bool, PropTypes.number ] ),
+    availableDevelopers: PropTypes.arrayOf(
+        PropTypes.shape( {
+            id: PropTypes.number.isRequired,
+        } )
+    ),
     availableGroups: PropTypes.arrayOf( PropTypes.string ),
     availableServices: PropTypes.arrayOf( PropTypes.string ),
     gameId: PropTypes.string.isRequired,
