@@ -29,9 +29,10 @@ const TIMEFRAMES = [
     { key: '24h', label: '24h' },
     { key: '7d', label: '7d' },
     { key: '30d', label: '30d' },
+    { key: '90d', label: '90d' },
     { key: 'all', label: 'All' },
 ];
-const DEFAULT_TIMEFRAME = '7d';
+const DEFAULT_TIMEFRAME = '90d';
 
 const sectionTitleSx = {
     color: 'text.secondary',
@@ -476,7 +477,7 @@ class Dashboard extends React.Component {
         );
     }
 
-    renderQuietChips ( names, disabled ) {
+    renderQuietChips ( quietGames, disabled ) {
         return (
             <Box
                 sx = { {
@@ -485,11 +486,23 @@ class Dashboard extends React.Component {
                     gap: 1,
                 } }
             >
-                { names.map( ( name ) => {
+                { quietGames.map( ( game ) => {
+                    // Link to the game's admin page when it has an identifier (the
+                    // /games/:gameId route param); a game without one can't be
+                    // deep-linked, so it stays a plain, non-clickable chip.
+                    const clickable = Boolean( game.identifier );
+
                     return (
                         <Chip
-                            key = { name }
-                            label = { name }
+                            clickable = { clickable }
+                            key = { game.identifier || game.name }
+                            label = { game.name }
+                            onClick = { clickable
+                                ? () => {
+                                    this.props.onSelectGame( game.identifier );
+                                }
+                                : undefined
+                            }
                             size = { 'small' }
                             sx = { disabled ? { opacity: 0.55 } : undefined }
                             variant = { 'outlined' }
@@ -546,21 +559,13 @@ class Dashboard extends React.Component {
             );
         }
 
-        const liveNames = quietGames
-            .filter( ( game ) => {
-                return !this.isGameDisabled( game );
-            } )
-            .map( ( game ) => {
-                return game.name;
-            } );
+        const liveGames = quietGames.filter( ( game ) => {
+            return !this.isGameDisabled( game );
+        } );
 
-        const disabledNames = quietGames
-            .filter( ( game ) => {
-                return this.isGameDisabled( game );
-            } )
-            .map( ( game ) => {
-                return game.name;
-            } );
+        const disabledGames = quietGames.filter( ( game ) => {
+            return this.isGameDisabled( game );
+        } );
 
         return (
             <Box
@@ -570,8 +575,8 @@ class Dashboard extends React.Component {
                     gap: 2,
                 } }
             >
-                { liveNames.length > 0
-                    ? this.renderQuietChips( liveNames, false )
+                { liveGames.length > 0
+                    ? this.renderQuietChips( liveGames, false )
                     : <Typography
                         color = { 'text.secondary' }
                         variant = { 'body2' }
@@ -579,7 +584,7 @@ class Dashboard extends React.Component {
                         { 'No active games are quiet in this timeframe.' }
                     </Typography>
                 }
-                { disabledNames.length > 0 &&
+                { disabledGames.length > 0 &&
                     <Box>
                         <Typography
                             color = { 'text.secondary' }
@@ -589,9 +594,9 @@ class Dashboard extends React.Component {
                             } }
                             variant = { 'caption' }
                         >
-                            { `Disabled (${ disabledNames.length })` }
+                            { `Disabled (${ disabledGames.length })` }
                         </Typography>
-                        { this.renderQuietChips( disabledNames, true ) }
+                        { this.renderQuietChips( disabledGames, true ) }
                     </Box>
                 }
             </Box>
@@ -674,7 +679,13 @@ class Dashboard extends React.Component {
                 sx = { {
                     alignItems: 'baseline',
                     display: 'flex',
-                    gap: 1,
+                    // Tighter gaps on mobile so all five states + separators stay
+                    // inside the card instead of overflowing its width.
+                    gap: {
+                        sm: 1,
+                        xs: 0.5,
+                    },
+                    justifyContent: 'space-between',
                 } }
             >
                 { QUEUE_FIELDS.map( ( field, index ) => {
@@ -687,6 +698,11 @@ class Dashboard extends React.Component {
                                     component = { 'span' }
                                     sx = { {
                                         color: 'text.disabled',
+                                        // Match the responsive number size below.
+                                        fontSize: {
+                                            sm: '1.5rem',
+                                            xs: '1.1rem',
+                                        },
                                         fontWeight: 600,
                                     } }
                                     variant = { 'h5' }
@@ -706,6 +722,12 @@ class Dashboard extends React.Component {
                                         color: field === 'failed' && queue.counts[ field ] > 0
                                             ? 'error.main'
                                             : 'text.primary',
+                                        // Shrink the count on mobile; h5 (1.5rem) ×5
+                                        // plus slashes overflows a phone-width card.
+                                        fontSize: {
+                                            sm: '1.5rem',
+                                            xs: '1.1rem',
+                                        },
                                         fontWeight: 600,
                                     } }
                                     variant = { 'h5' }
@@ -838,6 +860,7 @@ Dashboard.displayName = 'Dashboard';
 
 Dashboard.propTypes = {
     onNavigate: PropTypes.func.isRequired,
+    onSelectGame: PropTypes.func.isRequired,
 };
 
 export default Dashboard;

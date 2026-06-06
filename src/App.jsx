@@ -98,6 +98,7 @@ RoutedGames.displayName = 'RoutedGames';
 // prefill flow; otherwise render the Dashboard in place.
 const IndexRoute = () => {
     const location = useLocation();
+    const navigate = useNavigate();
 
     if ( location.search.includes( 'action=add-dev' ) ) {
         return (
@@ -108,9 +109,16 @@ const IndexRoute = () => {
         );
     }
 
+    // Dashboard navigates like RoutedGames: onNavigate switches top-level views,
+    // onSelectGame deep-links a quiet game to its '/games/:gameId' page.
     return (
-        <RoutedView
-            component = { Dashboard }
+        <Dashboard
+            onNavigate = { ( view ) => {
+                navigate( pathForView( view ) );
+            } }
+            onSelectGame = { ( identifier ) => {
+                navigate( '/games/' + identifier );
+            } }
         />
     );
 };
