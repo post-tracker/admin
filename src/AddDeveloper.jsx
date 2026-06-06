@@ -66,7 +66,10 @@ class AddDeveloper extends React.Component {
                 : '',
             group: props.prefillGroup || false,
             identifier: props.prefillIdentifier || false,
-            name: props.prefillName || false,
+            // The discovered value is a platform handle, i.e. the nick — not
+            // the real person's name. Leave Name empty for the user to fill in;
+            // prefill only the Nick.
+            name: false,
             nick: props.prefillName || false,
             role: false,
             service: props.prefillService || false,
