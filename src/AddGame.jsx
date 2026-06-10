@@ -1,5 +1,6 @@
 import React from 'react';
 
+import Box from '@mui/material/Box';
 import Dialog from '@mui/material/Dialog';
 import DialogTitle from '@mui/material/DialogTitle';
 import DialogContent from '@mui/material/DialogContent';
@@ -9,7 +10,15 @@ import Button from '@mui/material/Button';
 import TextField from '@mui/material/TextField';
 import AddIcon from '@mui/icons-material/Add';
 
+import BoxartPicker from './BoxartPicker.jsx';
 import api from './api.js';
+
+const EMPTY_GAME = {
+    boxart: '',
+    identifier: '',
+    name: '',
+    shortName: '',
+};
 
 class AddGame extends React.Component {
     constructor ( props ) {
@@ -17,18 +26,17 @@ class AddGame extends React.Component {
 
         this.handleShowCreate = this.handleShowCreate.bind( this );
         this.handleInputChange = this.handleInputChange.bind( this );
+        this.handleBoxartChange = this.handleBoxartChange.bind( this );
         this.handleSaveGame = this.handleSaveGame.bind( this );
 
-        this.state = {
-            identifier: false,
-            name: false,
-            shortName: false,
-            showCreate: false,
-        };
+        this.state = Object.assign( { showCreate: false }, EMPTY_GAME );
     }
 
     handleSaveGame () {
         const newGame = {
+            // Only persist a config when there's something in it, so games
+            // created without art don't carry an empty boxart key.
+            config: this.state.boxart ? { boxart: this.state.boxart } : undefined,
             // Every game is served from the shared domain; no longer edited per game.
             hostname: 'developertracker.com',
             identifier: this.state.identifier,
@@ -38,12 +46,7 @@ class AddGame extends React.Component {
 
         api.post( '/games', newGame )
             .then( () => {
-                this.setState( {
-                    identifier: false,
-                    name: false,
-                    shortName: false,
-                    showCreate: false,
-                } );
+                this.setState( Object.assign( { showCreate: false }, EMPTY_GAME ) );
 
                 window.snackbarText = 'Game added';
                 window.dispatchEvent( new Event( 'open-snackbar' ) );
@@ -56,11 +59,15 @@ class AddGame extends React.Component {
     }
 
     handleInputChange ( event ) {
-        const newState = {};
+        this.setState( {
+            [ event.target.name ]: event.target.value,
+        } );
+    }
 
-        newState[ event.target.name ] = event.target.value;
-
-        this.setState( newState );
+    handleBoxartChange ( boxart ) {
+        this.setState( {
+            boxart: boxart,
+        } );
     }
 
     handleShowCreate () {
@@ -81,6 +88,7 @@ class AddGame extends React.Component {
                     { 'Add game' }
                 </Button>
                 <Dialog
+                    fullWidth
                     onClose = { this.handleShowCreate }
                     open = { this.state.showCreate }
                 >
@@ -92,8 +100,9 @@ class AddGame extends React.Component {
                             fullWidth
                             label = { 'Name' }
                             name = { 'name' }
-                            onKeyUp = { this.handleInputChange }
+                            onChange = { this.handleInputChange }
                             placeholder = { 'Name' }
+                            value = { this.state.name }
                             variant = { 'standard' }
                         />
                         <Divider />
@@ -101,8 +110,9 @@ class AddGame extends React.Component {
                             fullWidth
                             label = { 'Short name' }
                             name = { 'shortName' }
-                            onKeyUp = { this.handleInputChange }
+                            onChange = { this.handleInputChange }
                             placeholder = { 'Short name' }
+                            value = { this.state.shortName }
                             variant = { 'standard' }
                         />
                         <Divider />
@@ -110,10 +120,22 @@ class AddGame extends React.Component {
                             fullWidth
                             label = { 'Identifier' }
                             name = { 'identifier' }
-                            onKeyUp = { this.handleInputChange }
+                            onChange = { this.handleInputChange }
                             placeholder = { 'Identifier' }
+                            value = { this.state.identifier }
                             variant = { 'standard' }
                         />
+                        <Box
+                            sx = { {
+                                mt: 3,
+                            } }
+                        >
+                            <BoxartPicker
+                                onChange = { this.handleBoxartChange }
+                                queryHint = { this.state.name }
+                                value = { this.state.boxart }
+                            />
+                        </Box>
                     </DialogContent>
                     <DialogActions>
                         <Button

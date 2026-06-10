@@ -13,6 +13,7 @@ import Typography from '@mui/material/Typography';
 import ExpandLessIcon from '@mui/icons-material/ExpandLess';
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
 
+import BoxartPicker from './BoxartPicker.jsx';
 import GameSources from './GameSources.jsx';
 import api from './api.js';
 
@@ -341,21 +342,14 @@ class GameInfo extends React.Component {
                                 { 'Light' }
                             </MenuItem>
                         </TextField>
-                        <TextField
-                            label = { 'Boxart URL' }
-                            onChange = { ( event ) => {
-                                this.handleFieldChange( 'boxart', event.target.value );
-                            } }
-                            size = { 'small' }
-                            sx = { {
-                                gridColumn: {
-                                    sm: '1 / -1',
-                                },
-                            } }
-                            value = { this.state.boxart }
-                            variant = { 'outlined' }
-                        />
                     </Box>
+                    <BoxartPicker
+                        key = { this.props.identifier }
+                        onChange = { ( url ) => {
+                            this.handleFieldChange( 'boxart', url );
+                        } }
+                        value = { this.state.boxart }
+                    />
                     <GameSources
                         onChange = { this.handleSourcesChange }
                         sources = { this.state.sources }
