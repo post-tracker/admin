@@ -31,13 +31,14 @@ const styles = {
         margin: 0,
     },
     wrapper: {
-        alignItems: 'flex-start',
         boxSizing: 'border-box',
-        display: 'flex',
-        flexWrap: 'wrap',
+        display: 'grid',
         gap: 20,
-        justifyContent: 'center',
-        padding: 20,
+        // Equal columns that share the row, so cards are all the same width and
+        // the grid fills edge to edge. The 40px side padding matches the game
+        // settings box above, lining both up on the left and right.
+        gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))',
+        padding: '20px 40px',
         width: '100%',
     },
 };

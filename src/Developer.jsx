@@ -18,6 +18,11 @@ import DeveloperField from './DeveloperField.jsx';
 import api from './api.js';
 
 const styles = {
+    // Pins the add-account / merge actions to the bottom so they line up across
+    // the equal-height cards in a row.
+    footer: {
+        marginTop: 'auto',
+    },
     header: {
         alignItems: 'center',
         display: 'flex',
@@ -26,12 +31,33 @@ const styles = {
         marginBottom: 10,
     },
     title: {
+        alignItems: 'baseline',
+        display: 'flex',
+        flex: 1,
+        gap: 6,
         margin: 0,
+        minWidth: 0,
+    },
+    // The id stays put; only the name truncates, so the header is always one line
+    // and the Active toggle never shifts.
+    titleId: {
+        color: '#9e9e9e',
+        flexShrink: 0,
+        fontSize: '0.8em',
+        fontWeight: 400,
+    },
+    titleName: {
+        overflow: 'hidden',
+        textOverflow: 'ellipsis',
+        whiteSpace: 'nowrap',
     },
 };
 
 const wrapperSx = {
     boxSizing: 'border-box',
+    display: 'flex',
+    flexDirection: 'column',
+    height: '100%',
     m: 0,
     maxWidth: '100%',
     p: {
@@ -39,10 +65,7 @@ const wrapperSx = {
         xs: '16px 18px',
     },
     position: 'relative',
-    width: {
-        sm: 340,
-        xs: '100%',
-    },
+    width: '100%',
 };
 
 class Developer extends React.PureComponent {
@@ -153,7 +176,16 @@ class Developer extends React.PureComponent {
                     <h3
                         style = { styles.title }
                     >
-                        { `${ thisLabel } - ${ this.props.id }` }
+                        <span
+                            style = { styles.titleName }
+                        >
+                            { thisLabel }
+                        </span>
+                        <span
+                            style = { styles.titleId }
+                        >
+                            { `- ${ this.props.id }` }
+                        </span>
                     </h3>
                     <FormControlLabel
                         control = {
@@ -199,22 +231,26 @@ class Developer extends React.PureComponent {
                     value = { this.props.role }
                 />
                 { this.getAccounts() }
-                <AddService
-                    availableGroups = { this.props.availableGroups }
-                    availableServices = { this.props.availableServices }
-                    developerId = { this.props.id }
-                    gameId = { this.props.gameId }
-                />
-                { mergeTargets.length > 0 &&
-                    <Button
-                        color = { 'secondary' }
-                        onClick = { this.handleToggleMerge }
-                        size = { 'small' }
-                        sx = { { mt: 1 } }
-                    >
-                        { 'Merge into…' }
-                    </Button>
-                }
+                <div
+                    style = { styles.footer }
+                >
+                    <AddService
+                        availableGroups = { this.props.availableGroups }
+                        availableServices = { this.props.availableServices }
+                        developerId = { this.props.id }
+                        gameId = { this.props.gameId }
+                    />
+                    { mergeTargets.length > 0 &&
+                        <Button
+                            color = { 'secondary' }
+                            onClick = { this.handleToggleMerge }
+                            size = { 'small' }
+                            sx = { { mt: 1 } }
+                        >
+                            { 'Merge into…' }
+                        </Button>
+                    }
+                </div>
                 <Dialog
                     fullWidth
                     onClose = { this.handleToggleMerge }
