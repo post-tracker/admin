@@ -6,10 +6,12 @@ import express from 'express';
 import cookieParser from 'cookie-parser';
 
 import { getQueueCounts } from './queues.js';
+import { isConfigured as twitchConfigured, searchGames } from './twitch.js';
 import { createQueuesRouter } from './bullBoard.js';
 
 const LISTEN_PORT = 4000;
 const INTERNAL_SERVER_ERROR = 500;
+const SERVICE_UNAVAILABLE = 503;
 const QUEUES_BASE_PATH = '/queues';
 
 const app = express();
@@ -34,6 +36,31 @@ app.get( '/api/queues', async ( request, response ) => {
         console.error( queuesError );
         response.status( INTERNAL_SERVER_ERROR ).json( {
             error: 'Failed to read queues',
+        } );
+    }
+} );
+
+// Twitch game search for the box art picker. The browser can't call Twitch
+// (CORS + the client secret), so the lookup happens here; see twitch.js. Reports
+// 503 when no Twitch credentials are configured so the picker can fall back to
+// manual entry.
+app.get( '/api/twitch-games', async ( request, response ) => {
+    if ( !twitchConfigured() ) {
+        response.status( SERVICE_UNAVAILABLE ).json( {
+            error: 'Twitch not configured',
+        } );
+
+        return;
+    }
+
+    try {
+        response.json( {
+            results: await searchGames( request.query.q ),
+        } );
+    } catch ( twitchError ) {
+        console.error( twitchError );
+        response.status( INTERNAL_SERVER_ERROR ).json( {
+            error: 'Twitch lookup failed',
         } );
     }
 } );

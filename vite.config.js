@@ -4,6 +4,7 @@ import dotenv from 'dotenv';
 import express from 'express';
 
 import { getQueueCounts } from './queues.js';
+import { isConfigured as twitchConfigured, searchGames } from './twitch.js';
 import { createQueuesRouter } from './bullBoard.js';
 
 const QUEUES_BASE_PATH = '/queues';
@@ -38,6 +39,40 @@ const apiQueuesPlugin = {
                 response.statusCode = 500;
                 response.end( JSON.stringify( {
                     error: queuesError.message,
+                } ) );
+            }
+        } );
+    },
+};
+
+// Mirrors server.js's /api/twitch-games route in dev so the box art picker's
+// lookup works under `vite`. Responds 503 when no Twitch credentials are set.
+const twitchGamesPlugin = {
+    name: 'dev-api-twitch-games',
+    configureServer ( server ) {
+        server.middlewares.use( '/api/twitch-games', async ( request, response ) => {
+            response.setHeader( 'Content-Type', 'application/json' );
+
+            if ( !twitchConfigured() ) {
+                response.statusCode = 503;
+                response.end( JSON.stringify( {
+                    error: 'Twitch not configured',
+                } ) );
+
+                return;
+            }
+
+            try {
+                // request.url is the path after the mount point, query included.
+                const query = new URL( request.url, 'http://localhost' ).searchParams.get( 'q' );
+
+                response.end( JSON.stringify( {
+                    results: await searchGames( query ),
+                } ) );
+            } catch ( twitchError ) {
+                response.statusCode = 500;
+                response.end( JSON.stringify( {
+                    error: twitchError.message,
                 } ) );
             }
         } );
@@ -91,6 +126,7 @@ export default defineConfig( {
         react(),
         apiTokenPlugin,
         apiQueuesPlugin,
+        twitchGamesPlugin,
         bullBoardPlugin,
     ],
     build: {
