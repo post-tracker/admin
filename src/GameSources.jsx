@@ -2,8 +2,10 @@ import React from 'react';
 import PropTypes from 'prop-types';
 
 import Autocomplete from '@mui/material/Autocomplete';
+import Avatar from '@mui/material/Avatar';
 import Box from '@mui/material/Box';
 import Button from '@mui/material/Button';
+import Divider from '@mui/material/Divider';
 import FormControlLabel from '@mui/material/FormControlLabel';
 import IconButton from '@mui/material/IconButton';
 import MenuItem from '@mui/material/MenuItem';
@@ -14,26 +16,22 @@ import TextField from '@mui/material/TextField';
 import Typography from '@mui/material/Typography';
 import AddIcon from '@mui/icons-material/Add';
 import DeleteIcon from '@mui/icons-material/Delete';
+import LanguageIcon from '@mui/icons-material/Language';
 
 // A type-aware editor for the per-game `sources` object:
 //   { ServiceName: { allowedSections: [...], type, label, endpoint, disabled, ... } }
-// Each service gets a tab; the selected service's fields render by value type —
-// arrays as a tag input (chips + type-to-add), booleans as switches, scalars as
-// text inputs. Every existing key is preserved and editable. The component is
-// controlled: it never mutates props.sources, it emits a fresh object via
-// onChange.
+// Each source gets a tab; the selected source's fields are grouped into an
+// identity header (name + routing type + enabled toggle), a Connection group
+// (endpoint / label), a Sections group (allowed / disallowed sections as chip
+// inputs), and an Advanced group (any custom keys + "Add field"). Every existing
+// key is preserved and editable. The component is controlled: it never mutates
+// props.sources, it emits a fresh object via onChange.
 //
-// The option fields available to add to any source (the same set across all
-// custom sources on all games). `kind` drives both the seeded default and the
-// input rendered for it. A custom (generic-reader) source is identified by
-// `type`; e.g. a Strapi news source sets `type: "Strapi"` plus `endpoint` /
-// `articleUrl` and, optionally, which attribute holds the title/date/body.
-// The recognised source types — `type` is a dropdown constrained to these so a
-// custom-named source routes to a reader that actually exists. `type` is the
-// routing override read by BOTH pipelines: the legacy indexer
-// (`modules/indexers/index.js`, matched by exact spelling minus spaces) and the
-// new grunt/peon pipeline (queue-users lowercases/dashes it). The list is the
-// union of both registries; values use each registry's canonical spelling.
+// `type` is the routing override read by BOTH pipelines: the legacy indexer
+// (`indexer/modules/indexers/*`, matched by exact spelling minus spaces) and the
+// new grunt/peon pipeline (queue-users lowercases/dashes it). The dropdown is
+// constrained to this list — the union of both registries, using each registry's
+// canonical spelling — so a custom-named source routes to a reader that exists.
 const KNOWN_SOURCE_TYPES = [
     'BattleNet',
     'Bungie.net',
@@ -60,6 +58,52 @@ const KNOWN_SOURCE_FIELDS = [
     { key: 'disabled', kind: 'boolean' },
 ];
 
+// Keys the editor models with a dedicated control somewhere in the layout
+// (header / Connection / Sections). Anything NOT in this set is a custom key and
+// falls through to the Advanced group's generic value-kind editor.
+const STRUCTURED_KEYS = [ 'type', 'label', 'endpoint', 'allowedSections', 'disallowedSections', 'disabled' ];
+
+// Keys with a dedicated control in the identity header, so they're never offered
+// in the "Add field" menu. Everything else (endpoint, label, the section lists)
+// is shown only when present and can be added on demand.
+const ALWAYS_SHOWN_KEYS = [ 'type', 'disabled' ];
+
+// The fields each source type actually needs to function, so adding a source
+// seeds a usable starting point instead of either an empty shell or every
+// possible field. Derived from the reader code in both pipelines (the legacy
+// `indexer/modules/indexers/*` and the new `grunt/indexers/*`):
+//   - endpoint: the readers that fetch from a URL bail out without it
+//     (CommLink, Discourse, InvisionPowerBoard, RSS, SimpleMachinesForum,
+//     Strapi, XenForo).
+//   - allowedSections: Steam derives its app ID from allowedSections[0], so the
+//     feed yields nothing until it's set.
+//   - account-driven sources (Reddit, Twitter, Instagram, rsi, Bungie.net,
+//     BattleNet) read no source config beyond `type` — the account identifier
+//     drives them — so they seed nothing extra (e.g. Reddit gets no endpoint).
+// Everything optional (label, section filters, Strapi field mappings, …) is
+// left off and added on demand via "Add field".
+const REQUIRED_FIELDS_BY_TYPE = {
+    'BattleNet': [],
+    'Bungie.net': [],
+    'CommLink': [ 'endpoint' ],
+    'Discourse': [ 'endpoint' ],
+    'Instagram': [],
+    'InvisionPowerBoard': [ 'endpoint' ],
+    'Reddit': [],
+    'RSS': [ 'endpoint' ],
+    'rsi': [],
+    'SimpleMachinesForum': [ 'endpoint' ],
+    'Steam': [ 'allowedSections' ],
+    'Strapi': [ 'endpoint' ],
+    'Twitter': [],
+    'XenForo': [ 'endpoint' ],
+};
+
+// Field rows hold a single value (an endpoint URL, a label, a section name), so
+// cap them at a comfortable reading width instead of letting them stretch the
+// full panel on wide desktop screens.
+const FIELD_MAX_WIDTH = 480;
+
 const defaultForKind = function defaultForKind ( kind ) {
     if ( kind === 'list' ) {
         return [];
@@ -76,6 +120,89 @@ const defaultForKind = function defaultForKind ( kind ) {
     return '';
 };
 
+// What an endpoint means depends on the source type, so tailor the hint.
+const endpointHelp = function endpointHelp ( type ) {
+    if ( type === 'RSS' || type === 'CommLink' ) {
+        return 'Feed URL';
+    }
+
+    if (
+        type === 'Discourse'
+        || type === 'XenForo'
+        || type === 'InvisionPowerBoard'
+        || type === 'SimpleMachinesForum'
+    ) {
+        return 'Forum base URL';
+    }
+
+    if ( type === 'Strapi' ) {
+        return 'API base URL';
+    }
+
+    return 'Source URL';
+};
+
+const allowedSectionsHelp = function allowedSectionsHelp ( type ) {
+    if ( type === 'Steam' ) {
+        return 'Steam app ID(s).';
+    }
+
+    return 'Only index posts from these sections. Leave empty for all.';
+};
+
+// Canonical domains for the account-driven brands that have no `endpoint` to
+// derive a favicon from. Forum/feed types (Discourse, XenForo, RSS, …) instead
+// use their configured endpoint's host, so they're intentionally absent here.
+const BRAND_DOMAINS = {
+    'BattleNet': 'battle.net',
+    'Bungie.net': 'bungie.net',
+    'CommLink': 'robertsspaceindustries.com',
+    'Instagram': 'instagram.com',
+    'Reddit': 'reddit.com',
+    'rsi': 'robertsspaceindustries.com',
+    'Steam': 'steampowered.com',
+    'Twitch': 'twitch.tv',
+    'Twitter': 'x.com',
+    'YouTube': 'youtube.com',
+};
+
+// The domain whose favicon best represents a source: its endpoint host when set
+// (a forum/feed), else the brand domain for its type or name. False when nothing
+// sensible maps (the avatar then falls back to the source's initial).
+const faviconDomain = function faviconDomain ( service, serviceValue ) {
+    if ( serviceValue.endpoint ) {
+        try {
+            const raw = String( serviceValue.endpoint );
+            const url = new URL( raw.includes( '://' ) ? raw : `https://${ raw }` );
+
+            if ( url.hostname ) {
+                return url.hostname;
+            }
+        } catch {
+            // Not a parseable URL yet (mid-typing) — fall back to the brand map.
+        }
+    }
+
+    return BRAND_DOMAINS[ serviceValue.type ] || BRAND_DOMAINS[ service ] || false;
+};
+
+// Google's favicon service resolves a domain to its site icon; the Avatar shows
+// the source's initial if the image 404s or the domain is unknown.
+const faviconUrl = function faviconUrl ( domain ) {
+    if ( !domain ) {
+        return false;
+    }
+
+    return `https://www.google.com/s2/favicons?domain=${ encodeURIComponent( domain ) }&sz=64`;
+};
+
+// The non-structured keys on a source — what the Advanced group edits.
+const customKeysOf = function customKeysOf ( serviceValue ) {
+    return Object.keys( serviceValue || {} ).filter( ( key ) => {
+        return !STRUCTURED_KEYS.includes( key );
+    } );
+};
+
 class GameSources extends React.Component {
     constructor ( props ) {
         super( props );
@@ -84,9 +211,9 @@ class GameSources extends React.Component {
         this.handleTabChange = this.handleTabChange.bind( this );
 
         this.state = {
-            // currently selected service tab (by name)
+            // currently selected source tab (by name)
             activeService: Object.keys( props.sources )[ 0 ] || false,
-            // in-progress "add field" selection for the active service
+            // in-progress "add field" selection for the active source
             newField: '',
             newService: '',
         };
@@ -114,28 +241,6 @@ class GameSources extends React.Component {
         } ) );
     }
 
-    updateArrayItem ( service, key, index, value ) {
-        const next = ( this.props.sources[ service ][ key ] || [] ).slice();
-
-        next[ index ] = value;
-
-        this.updateField( service, key, next );
-    }
-
-    addArrayItem ( service, key ) {
-        const current = this.props.sources[ service ][ key ] || [];
-
-        this.updateField( service, key, [ ...current, '' ] );
-    }
-
-    removeArrayItem ( service, key, index ) {
-        const current = this.props.sources[ service ][ key ] || [];
-
-        this.updateField( service, key, current.filter( ( item, itemIndex ) => {
-            return itemIndex !== index;
-        } ) );
-    }
-
     removeField ( service, key ) {
         const next = Object.assign( {}, this.props.sources[ service ] );
 
@@ -156,6 +261,39 @@ class GameSources extends React.Component {
         } );
     }
 
+    // Enabled is the inverse of the stored `disabled` flag. Turning a source back
+    // on drops the key entirely rather than storing `disabled: false`, to keep
+    // the saved config clean.
+    toggleEnabled ( service, enabled ) {
+        const next = Object.assign( {}, this.props.sources[ service ] );
+
+        if ( enabled ) {
+            delete next.disabled;
+        } else {
+            next.disabled = true;
+        }
+
+        this.updateService( service, next );
+    }
+
+    // Section chip inputs emit the whole list; trim/drop blanks, and remove the
+    // key entirely when emptied so untouched sources don't accrue empty arrays.
+    setSectionList ( service, key, list ) {
+        const cleaned = list
+            .map( ( item ) => {
+                return String( item ).trim();
+            } )
+            .filter( Boolean );
+
+        if ( cleaned.length === 0 ) {
+            this.removeField( service, key );
+
+            return;
+        }
+
+        this.updateField( service, key, cleaned );
+    }
+
     handleTabChange ( event, value ) {
         this.setState( {
             activeService: value,
@@ -170,14 +308,20 @@ class GameSources extends React.Component {
             return;
         }
 
-        // Seed every known field with its type-appropriate default so a new
-        // source shows the full form up front. The source is keyed by its
-        // type, so seed `type` to the chosen value. Unwanted fields can be
-        // removed, custom ones still added via "Add field".
-        const seeded = {};
+        // Seed `type` (the routing field, set to the chosen source name) plus
+        // only the fields this source type actually needs — see
+        // REQUIRED_FIELDS_BY_TYPE. Optional fields are added on demand via
+        // "Add field".
+        const seeded = {
+            type: name,
+        };
 
-        for ( const field of KNOWN_SOURCE_FIELDS ) {
-            seeded[ field.key ] = field.key === 'type' ? name : defaultForKind( field.kind );
+        for ( const fieldKey of REQUIRED_FIELDS_BY_TYPE[ name ] || [] ) {
+            const known = KNOWN_SOURCE_FIELDS.find( ( field ) => {
+                return field.key === fieldKey;
+            } );
+
+            seeded[ fieldKey ] = defaultForKind( known ? known.kind : 'text' );
         }
 
         this.updateService( name, seeded );
@@ -208,72 +352,206 @@ class GameSources extends React.Component {
         } );
     }
 
-    renderArrayField ( service, key, values ) {
+    // `first` drops the top margin so the first group in the settings column
+    // lines up with the top of the meta column beside it.
+    renderGroupHeader ( text, first ) {
         return (
             <Box
-                key = { key }
                 sx = { {
-                    mt: 1.5,
+                    mt: first
+                        ? 0
+                        : 2.5,
                 } }
             >
                 <Typography
                     color = { 'text.secondary' }
+                    sx = { {
+                        display: 'block',
+                        letterSpacing: 1,
+                    } }
+                    variant = { 'overline' }
+                >
+                    { text }
+                </Typography>
+                <Divider />
+            </Box>
+        );
+    }
+
+    // The left column: source identity (favicon, name, routing type) and the
+    // source-level controls (enable / remove). Settings live in the right column.
+    // Small favicon avatar shown on each source tab; falls back to the source's
+    // initial when no icon resolves.
+    renderSourceIcon ( service ) {
+        const serviceValue = this.props.sources[ service ] || {};
+        const icon = faviconUrl( faviconDomain( service, serviceValue ) );
+
+        return (
+            <Avatar
+                src = { icon || undefined }
+                sx = { {
+                    bgcolor: 'background.paper',
+                    border: 1,
+                    borderColor: 'divider',
+                    color: 'text.secondary',
+                    fontSize: 11,
+                    height: 20,
+                    width: 20,
+                    '& .MuiAvatar-img': {
+                        objectFit: 'contain',
+                        padding: '2px',
+                    },
+                } }
+                variant = { 'rounded' }
+            >
+                { String( service ).charAt( 0 ).toUpperCase() }
+            </Avatar>
+        );
+    }
+
+    // The left column: routing type, enable toggle and remove. The source's
+    // favicon + name live on its tab, not here.
+    renderIdentity ( service, serviceValue ) {
+        const enabled = !serviceValue.disabled;
+
+        // `type` is only a routing override; when it's absent both pipelines route
+        // by the source name (the object key). So a source named after a known
+        // type (e.g. "Steam") resolves to that same reader — surface the resolved
+        // type, flagged "(by name)" when it's name-derived rather than explicit.
+        const effectiveType = serviceValue.type
+            || ( KNOWN_SOURCE_TYPES.includes( service )
+                ? service
+                : null );
+        const typeText = effectiveType
+            ? `Type: ${ effectiveType }${ serviceValue.type ? '' : ' (by name)' }`
+            : 'Routes by source name';
+
+        return (
+            <Box
+                sx = { {
+                    alignItems: 'flex-start',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    flexShrink: 0,
+                    gap: 1.5,
+                    width: {
+                        sm: 200,
+                        xs: '100%',
+                    },
+                } }
+            >
+                <Typography
+                    color = { 'text.secondary' }
+                    noWrap
+                    sx = { {
+                        width: '100%',
+                    } }
+                    title = { typeText }
                     variant = { 'caption' }
                 >
-                    { key }
+                    { typeText }
                 </Typography>
-                <Box
+                <FormControlLabel
+                    control = {
+                        <Switch
+                            checked = { enabled }
+                            onChange = { ( event, checked ) => {
+                                this.toggleEnabled( service, checked );
+                            } }
+                        />
+                    }
+                    label = { 'Enabled' }
+                />
+                <Button
+                    color = { 'error' }
+                    onClick = { () => {
+                        this.removeService( service );
+                    } }
+                    size = { 'small' }
+                    startIcon = { <DeleteIcon /> }
+                >
+                    { 'Remove' }
+                </Button>
+            </Box>
+        );
+    }
+
+    renderScalarField ( service, key, value, options ) {
+        const settings = options || {};
+
+        return (
+            <Box
+                key = { key }
+                sx = { {
+                    alignItems: 'flex-start',
+                    display: 'flex',
+                    gap: 0.5,
+                    maxWidth: FIELD_MAX_WIDTH,
+                    mt: 1.5,
+                } }
+            >
+                <TextField
+                    fullWidth
+                    helperText = { settings.helperText }
+                    label = { settings.label || key }
+                    onChange = { ( event ) => {
+                        this.updateField( service, key, event.target.value );
+                    } }
+                    size = { 'small' }
+                    value = { value === null || value === undefined ? '' : String( value ) }
+                    variant = { 'outlined' }
+                />
+                <IconButton
+                    onClick = { () => {
+                        this.removeField( service, key );
+                    } }
+                    size = { 'small' }
                     sx = { {
-                        display: 'flex',
-                        flexDirection: 'column',
-                        gap: 1,
                         mt: 0.5,
                     } }
                 >
-                    { values.map( ( value, index ) => {
+                    <DeleteIcon
+                        fontSize = { 'small' }
+                    />
+                </IconButton>
+            </Box>
+        );
+    }
+
+    // A chip input: type-and-Enter adds a value, the chip's × removes it. Used
+    // for the section lists and any custom array-valued field.
+    renderChipField ( service, key, values, options ) {
+        const settings = options || {};
+
+        return (
+            <Box
+                key = { key }
+                sx = { {
+                    maxWidth: FIELD_MAX_WIDTH,
+                    mt: 1.5,
+                } }
+            >
+                <Autocomplete
+                    freeSolo
+                    multiple
+                    onChange = { ( event, newValue ) => {
+                        this.setSectionList( service, key, newValue );
+                    } }
+                    options = { [] }
+                    renderInput = { ( params ) => {
                         return (
-                            <Box
-                                key = { index }
-                                sx = { {
-                                    alignItems: 'center',
-                                    display: 'flex',
-                                    gap: 0.5,
-                                } }
-                            >
-                                <TextField
-                                    fullWidth
-                                    onChange = { ( event ) => {
-                                        this.updateArrayItem( service, key, index, event.target.value );
-                                    } }
-                                    size = { 'small' }
-                                    value = { value === null || value === undefined ? '' : String( value ) }
-                                    variant = { 'outlined' }
-                                />
-                                <IconButton
-                                    onClick = { () => {
-                                        this.removeArrayItem( service, key, index );
-                                    } }
-                                    size = { 'small' }
-                                >
-                                    <DeleteIcon
-                                        fontSize = { 'small' }
-                                    />
-                                </IconButton>
-                            </Box>
+                            <TextField
+                                { ...params }
+                                helperText = { settings.helperText }
+                                label = { settings.label || key }
+                                placeholder = { 'Type and press Enter' }
+                                size = { 'small' }
+                                variant = { 'outlined' }
+                            />
                         );
-                    } ) }
-                    <Box>
-                        <Button
-                            onClick = { () => {
-                                this.addArrayItem( service, key );
-                            } }
-                            size = { 'small' }
-                            startIcon = { <AddIcon /> }
-                        >
-                            { 'Add' }
-                        </Button>
-                    </Box>
-                </Box>
+                    } }
+                    value = { Array.isArray( values ) ? values : [] }
+                />
             </Box>
         );
     }
@@ -314,95 +592,12 @@ class GameSources extends React.Component {
         );
     }
 
-    renderTypeField ( service, key, value ) {
-        return (
-            <Box
-                key = { key }
-                sx = { {
-                    alignItems: 'center',
-                    display: 'flex',
-                    gap: 0.5,
-                    mt: 1.5,
-                } }
-            >
-                <TextField
-                    fullWidth
-                    label = { key }
-                    onChange = { ( event ) => {
-                        this.updateField( service, key, event.target.value );
-                    } }
-                    select
-                    size = { 'small' }
-                    value = { value === null || value === undefined ? '' : String( value ) }
-                    variant = { 'outlined' }
-                >
-                    { KNOWN_SOURCE_TYPES.map( ( typeName ) => {
-                        return (
-                            <MenuItem
-                                key = { typeName }
-                                value = { typeName }
-                            >
-                                { typeName }
-                            </MenuItem>
-                        );
-                    } ) }
-                </TextField>
-                <IconButton
-                    onClick = { () => {
-                        this.removeField( service, key );
-                    } }
-                    size = { 'small' }
-                >
-                    <DeleteIcon
-                        fontSize = { 'small' }
-                    />
-                </IconButton>
-            </Box>
-        );
-    }
-
-    renderScalarField ( service, key, value ) {
-        return (
-            <Box
-                key = { key }
-                sx = { {
-                    alignItems: 'center',
-                    display: 'flex',
-                    gap: 0.5,
-                    mt: 1.5,
-                } }
-            >
-                <TextField
-                    fullWidth
-                    label = { key }
-                    onChange = { ( event ) => {
-                        this.updateField( service, key, event.target.value );
-                    } }
-                    size = { 'small' }
-                    value = { value === null || value === undefined ? '' : String( value ) }
-                    variant = { 'outlined' }
-                />
-                <IconButton
-                    onClick = { () => {
-                        this.removeField( service, key );
-                    } }
-                    size = { 'small' }
-                >
-                    <DeleteIcon
-                        fontSize = { 'small' }
-                    />
-                </IconButton>
-            </Box>
-        );
-    }
-
+    // Generic editor for custom (non-structured) keys, dispatched by value type.
     renderField ( service, key, value ) {
-        if ( key === 'type' ) {
-            return this.renderTypeField( service, key, value );
-        }
-
         if ( Array.isArray( value ) ) {
-            return this.renderArrayField( service, key, value );
+            return this.renderChipField( service, key, value, {
+                label: key,
+            } );
         }
 
         if ( typeof value === 'boolean' ) {
@@ -412,13 +607,66 @@ class GameSources extends React.Component {
         return this.renderScalarField( service, key, value );
     }
 
-    // The option fields not yet present on this source — the menu of things you
-    // can add. freeSolo, so an unlisted key can still be typed in.
+    // A titled group of field nodes. `first` aligns it to the top of the column.
+    renderGroup ( title, nodes, first ) {
+        return (
+            <React.Fragment
+                key = { title }
+            >
+                { this.renderGroupHeader( title, first ) }
+                { nodes }
+            </React.Fragment>
+        );
+    }
+
+    connectionFields ( service, serviceValue ) {
+        const fields = [];
+
+        if ( serviceValue.endpoint !== undefined ) {
+            fields.push( this.renderScalarField( service, 'endpoint', serviceValue.endpoint, {
+                helperText: endpointHelp( serviceValue.type ),
+                label: 'Endpoint',
+            } ) );
+        }
+
+        if ( serviceValue.label !== undefined ) {
+            fields.push( this.renderScalarField( service, 'label', serviceValue.label, {
+                helperText: 'Display name shown on the site (optional)',
+                label: 'Label',
+            } ) );
+        }
+
+        return fields;
+    }
+
+    sectionFields ( service, serviceValue ) {
+        const fields = [];
+
+        if ( serviceValue.allowedSections !== undefined ) {
+            fields.push( this.renderChipField( service, 'allowedSections', serviceValue.allowedSections, {
+                helperText: allowedSectionsHelp( serviceValue.type ),
+                label: 'Allowed sections',
+            } ) );
+        }
+
+        if ( serviceValue.disallowedSections !== undefined ) {
+            fields.push( this.renderChipField( service, 'disallowedSections', serviceValue.disallowedSections, {
+                helperText: 'Skip posts from these sections.',
+                label: 'Disallowed sections',
+            } ) );
+        }
+
+        return fields;
+    }
+
+    // The known fields not yet present and not already shown elsewhere — the menu
+    // of things you can add. freeSolo, so an unlisted custom key can be typed in.
     renderAddField ( service ) {
         const serviceValue = this.props.sources[ service ] || {};
         const available = KNOWN_SOURCE_FIELDS
             .filter( ( field ) => {
-                return !Reflect.apply( {}.hasOwnProperty, serviceValue, [ field.key ] );
+                return !ALWAYS_SHOWN_KEYS.includes( field.key )
+                    && !Reflect.apply( {}.hasOwnProperty, serviceValue, [ field.key ] );
             } )
             .map( ( field ) => {
                 return field.key;
@@ -473,36 +721,81 @@ class GameSources extends React.Component {
         );
     }
 
+    // Any non-structured keys on the source, as field nodes (empty when none).
+    customFieldNodes ( service, serviceValue ) {
+        return customKeysOf( serviceValue ).map( ( key ) => {
+            return this.renderField( service, key, serviceValue[ key ] );
+        } );
+    }
+
     renderPanel ( service ) {
         const serviceValue = this.props.sources[ service ] || {};
+
+        // Only groups that actually have fields are shown; the first one drops its
+        // top margin so it lines up with the meta column beside it.
+        const groups = [
+            [ 'Connection', this.connectionFields( service, serviceValue ) ],
+            [ 'Sections', this.sectionFields( service, serviceValue ) ],
+            [ 'Custom', this.customFieldNodes( service, serviceValue ) ],
+        ].filter( ( group ) => {
+            return group[ 1 ].length > 0;
+        } );
 
         return (
             <Box
                 sx = { {
+                    display: 'flex',
+                    flexDirection: {
+                        sm: 'row',
+                        xs: 'column',
+                    },
+                    gap: {
+                        sm: 4,
+                        xs: 2,
+                    },
                     pt: 2,
                 } }
             >
+                { this.renderIdentity( service, serviceValue ) }
                 <Box
                     sx = { {
-                        display: 'flex',
-                        justifyContent: 'flex-end',
+                        flexGrow: 1,
+                        maxWidth: FIELD_MAX_WIDTH,
+                        minWidth: 0,
                     } }
                 >
-                    <Button
-                        color = { 'error' }
-                        onClick = { () => {
-                            this.removeService( service );
-                        } }
-                        size = { 'small' }
-                        startIcon = { <DeleteIcon /> }
-                    >
-                        { 'Remove source' }
-                    </Button>
+                    { groups.map( ( group, index ) => {
+                        return this.renderGroup( group[ 0 ], group[ 1 ], index === 0 );
+                    } ) }
+                    { this.renderAddField( service ) }
                 </Box>
-                { Object.keys( serviceValue ).map( ( key ) => {
-                    return this.renderField( service, key, serviceValue[ key ] );
-                } ) }
-                { this.renderAddField( service ) }
+            </Box>
+        );
+    }
+
+    renderEmptyState () {
+        return (
+            <Box
+                sx = { {
+                    alignItems: 'center',
+                    color: 'text.secondary',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    gap: 1,
+                    py: 4,
+                } }
+            >
+                <LanguageIcon
+                    sx = { {
+                        fontSize: 40,
+                        opacity: 0.4,
+                    } }
+                />
+                <Typography
+                    variant = { 'body2' }
+                >
+                    { 'No sources yet — add one to start indexing this game.' }
+                </Typography>
             </Box>
         );
     }
@@ -559,8 +852,17 @@ class GameSources extends React.Component {
                             { services.map( ( service ) => {
                                 return (
                                     <Tab
+                                        icon = { this.renderSourceIcon( service ) }
+                                        iconPosition = { 'start' }
                                         key = { service }
                                         label = { service }
+                                        sx = { {
+                                            minHeight: 'auto',
+                                            // Disabled sources read at a glance as dimmed tabs.
+                                            opacity: this.props.sources[ service ].disabled
+                                                ? 0.5
+                                                : 1,
+                                        } }
                                         value = { service }
                                     />
                                 );
@@ -619,16 +921,7 @@ class GameSources extends React.Component {
                 </Box>
                 { services.length > 0
                     ? this.renderPanel( currentService )
-                    : <Typography
-                        color = { 'text.secondary' }
-                        sx = { {
-                            mt: 2,
-                        } }
-                        variant = { 'body2' }
-                    >
-                        { 'No sources yet.' }
-                    </Typography>
-                }
+                    : this.renderEmptyState() }
             </Box>
         );
     }
