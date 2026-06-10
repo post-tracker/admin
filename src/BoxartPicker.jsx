@@ -3,6 +3,7 @@ import PropTypes from 'prop-types';
 
 import Box from '@mui/material/Box';
 import CircularProgress from '@mui/material/CircularProgress';
+import Collapse from '@mui/material/Collapse';
 import IconButton from '@mui/material/IconButton';
 import InputAdornment from '@mui/material/InputAdornment';
 import List from '@mui/material/List';
@@ -10,6 +11,8 @@ import ListItemButton from '@mui/material/ListItemButton';
 import ListItemText from '@mui/material/ListItemText';
 import TextField from '@mui/material/TextField';
 import Typography from '@mui/material/Typography';
+import ExpandLessIcon from '@mui/icons-material/ExpandLess';
+import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
 import SearchIcon from '@mui/icons-material/Search';
 
 import { buildBoxartUrls, extractBoxartQuery } from './boxart.js';
@@ -17,29 +20,6 @@ import { buildBoxartUrls, extractBoxartQuery } from './boxart.js';
 const HTTP_SERVICE_UNAVAILABLE = 503;
 
 const styles = {
-    placeholder: {
-        alignItems: 'center',
-        bgcolor: 'action.hover',
-        border: 1,
-        borderColor: 'divider',
-        borderRadius: 1,
-        color: 'text.disabled',
-        display: 'flex',
-        flexShrink: 0,
-        fontSize: 12,
-        height: 96,
-        justifyContent: 'center',
-        textAlign: 'center',
-        width: 72,
-    },
-    thumb: {
-        borderRadius: 4,
-        display: 'block',
-        flexShrink: 0,
-        height: 96,
-        objectFit: 'cover',
-        width: 72,
-    },
     resultThumb: {
         borderRadius: 2,
         flexShrink: 0,
@@ -87,6 +67,9 @@ class BoxartPicker extends React.Component {
             results: [],
             searching: false,
             searchMessage: '',
+            // Reveals the raw Boxart URL field, hidden by default since the
+            // lookup above usually sets it for you.
+            urlOpen: false,
         };
     }
 
@@ -254,36 +237,24 @@ class BoxartPicker extends React.Component {
         } );
     }
 
-    renderPreview () {
+    // A hidden probe that loads the current URL purely to report found/missing
+    // and to advance through candidate URLs on error. The visible thumbnail
+    // lives in the game header, so the picker shows no image of its own.
+    renderProbe () {
         if ( !this.props.value ) {
-            return (
-                <Box sx = { styles.placeholder }>
-                    { 'No image' }
-                </Box>
-            );
+            return null;
         }
 
         return (
             <img
+                alt = { '' }
                 key = { this.props.value }
                 onError = { this.handleError }
                 onLoad = { this.handleLoad }
                 src = { this.props.value }
-                style = { styles.thumb }
+                style = { { display: 'none' } }
             />
         );
-    }
-
-    renderStatus () {
-        if ( !this.props.value || this.state.status === 'found' ) {
-            return 'Search by name, or enter a Twitch game id.';
-        }
-
-        if ( this.state.status === 'missing' ) {
-            return 'No Twitch image at this value — search by name, try the numeric id, or paste a URL.';
-        }
-
-        return ' ';
     }
 
     renderResults () {
@@ -292,6 +263,7 @@ class BoxartPicker extends React.Component {
                 <Typography
                     color = { 'text.secondary' }
                     sx = { {
+                        mt: 1,
                         px: 1,
                     } }
                     variant = { 'caption' }
@@ -314,6 +286,7 @@ class BoxartPicker extends React.Component {
                     borderColor: 'divider',
                     borderRadius: 1,
                     maxHeight: 232,
+                    mt: 1,
                     overflowY: 'auto',
                 } }
             >
@@ -343,24 +316,25 @@ class BoxartPicker extends React.Component {
         return (
             <Box
                 sx = { {
-                    alignItems: 'flex-start',
                     display: 'flex',
-                    gap: 2,
+                    flexDirection: 'column',
+                    minWidth: 0,
+                    width: {
+                        sm: 280,
+                        xs: '100%',
+                    },
                 } }
             >
-                { this.renderPreview() }
+                { this.renderProbe() }
                 <Box
                     sx = { {
+                        alignItems: 'center',
                         display: 'flex',
-                        flexDirection: 'column',
-                        flexGrow: 1,
-                        gap: 2,
-                        minWidth: 0,
+                        gap: 0.5,
                     } }
                 >
                     <TextField
                         fullWidth
-                        helperText = { this.renderStatus() }
                         slotProps = { {
                             input: {
                                 endAdornment: (
@@ -380,7 +354,7 @@ class BoxartPicker extends React.Component {
                                 ),
                             },
                         } }
-                        label = { 'Twitch game (name or ID)' }
+                        label = { 'Game lookup (name or ID)' }
                         onChange = { this.handleQueryChange }
                         onKeyDown = { this.handleQueryKeyDown }
                         placeholder = { 'e.g. Hades, or 1872074204' }
@@ -388,16 +362,38 @@ class BoxartPicker extends React.Component {
                         value = { this.state.query }
                         variant = { 'outlined' }
                     />
-                    { this.renderResults() }
+                    <IconButton
+                        onClick = { () => {
+                            this.setState( ( previousState ) => {
+                                return {
+                                    urlOpen: !previousState.urlOpen,
+                                };
+                            } );
+                        } }
+                        size = { 'small' }
+                        title = { 'Edit boxart URL' }
+                    >
+                        { this.state.urlOpen
+                            ? <ExpandLessIcon fontSize = { 'small' } />
+                            : <ExpandMoreIcon fontSize = { 'small' } /> }
+                    </IconButton>
+                </Box>
+                { this.renderResults() }
+                <Collapse
+                    in = { this.state.urlOpen }
+                >
                     <TextField
                         fullWidth
                         label = { 'Boxart URL' }
                         onChange = { this.handleUrlChange }
                         size = { 'small' }
+                        sx = { {
+                            mt: 1,
+                        } }
                         value = { this.props.value }
                         variant = { 'outlined' }
                     />
-                </Box>
+                </Collapse>
             </Box>
         );
     }

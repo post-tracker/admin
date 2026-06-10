@@ -21,20 +21,6 @@ import api from './api.js';
 // in the Advanced raw-JSON editor and is preserved untouched on save.
 const KNOWN_CONFIG_KEYS = [ 'boxart', 'live', 'defaultTheme', 'sources' ];
 
-// Editable top-level game columns. `identifier` is the key (shown read-only)
-// and `id`/`config`/`hostname` are handled separately (hostname is no longer
-// edited here — every game uses developertracker.com).
-const TEXT_FIELDS = [
-    {
-        key: 'name',
-        label: 'Name',
-    },
-    {
-        key: 'shortName',
-        label: 'Short name',
-    },
-];
-
 const styles = {
     boxartThumb: {
         borderRadius: 4,
@@ -88,6 +74,8 @@ class GameInfo extends React.Component {
             boxart: config.boxart || '',
             defaultTheme: config.defaultTheme || '',
             dirty: false,
+            // Which inline field (name / shortName) is currently being edited.
+            editingField: false,
             // Absence of `live` means the game is live; only an explicit 0/false
             // marks it offline (matches site/build.js and rest-api consumers).
             live: !( config.live === 0 || config.live === false ),
@@ -217,118 +205,176 @@ class GameInfo extends React.Component {
             } );
     }
 
-    renderTextField ( field ) {
+    // Small uppercase caption that names a value (so it's clear what an inline
+    // field or read-only value represents).
+    renderFieldLabel ( text ) {
         return (
-            <TextField
-                key = { field.key }
-                label = { field.label }
-                onChange = { ( event ) => {
-                    this.handleFieldChange( field.key, event.target.value );
+            <Typography
+                color = { 'text.secondary' }
+                component = { 'div' }
+                sx = { {
+                    fontSize: '0.7rem',
+                    letterSpacing: 0.5,
+                    lineHeight: 1.4,
+                    textTransform: 'uppercase',
                 } }
-                size = { 'small' }
-                value = { this.state[ field.key ] }
-                variant = { 'outlined' }
-            />
+            >
+                { text }
+            </Typography>
+        );
+    }
+
+    // Inline-editable text: renders a label, then the value as clickable text
+    // that swaps to a field while editing. Enter / Escape / blur ends editing;
+    // the value is kept live in state as it's typed (which marks the form dirty).
+    renderEditableField ( field, options ) {
+        const settings = options || {};
+        const value = this.state[ field ];
+
+        const inner = this.state.editingField === field
+            ? (
+                <TextField
+                    autoFocus
+                    onBlur = { () => {
+                        this.setState( {
+                            editingField: false,
+                        } );
+                    } }
+                    onChange = { ( event ) => {
+                        this.handleFieldChange( field, event.target.value );
+                    } }
+                    onKeyDown = { ( event ) => {
+                        if ( event.key === 'Enter' || event.key === 'Escape' ) {
+                            event.target.blur();
+                        }
+                    } }
+                    placeholder = { settings.placeholder }
+                    size = { 'small' }
+                    value = { value }
+                    variant = { 'standard' }
+                />
+            )
+            : (
+                <Typography
+                    color = { settings.color }
+                    noWrap
+                    onClick = { () => {
+                        this.setState( {
+                            editingField: field,
+                        } );
+                    } }
+                    sx = { {
+                        borderRadius: 1,
+                        cursor: 'text',
+                        mx: -0.5,
+                        px: 0.5,
+                        '&:hover': {
+                            bgcolor: 'action.hover',
+                        },
+                    } }
+                    title = { 'Click to edit' }
+                    variant = { settings.variant }
+                >
+                    { value || settings.placeholder }
+                </Typography>
+            );
+
+        return (
+            <Box>
+                { settings.label && this.renderFieldLabel( settings.label ) }
+                { inner }
+            </Box>
         );
     }
 
     render () {
-        const fieldGridSx = {
-            display: 'grid',
-            gap: 2,
-            gridTemplateColumns: {
-                md: 'repeat(4, 1fr)',
-                sm: '1fr 1fr',
-                xs: '1fr',
-            },
-        };
-
         return (
-            <Paper
-                elevation = { 2 }
+            <Box
                 sx = { {
                     m: {
                         md: '15px 40px',
                         xs: '8px',
                     },
-                    overflow: 'hidden',
                 } }
             >
-                <Box
+                <Paper
+                    elevation = { 2 }
                     sx = { {
-                        alignItems: 'center',
-                        borderBottom: 1,
-                        borderColor: 'divider',
-                        display: 'flex',
-                        gap: 2,
-                        p: 2,
+                        overflow: 'hidden',
                     } }
                 >
-                    { this.state.boxart &&
-                        <img
-                            key = { this.state.boxart }
-                            onError = { this.handleBoxartError }
-                            src = { this.state.boxart }
-                            style = { styles.boxartThumb }
-                        />
-                    }
                     <Box
                         sx = { {
-                            flexGrow: 1,
-                            minWidth: 0,
+                            alignItems: 'center',
+                            borderBottom: 1,
+                            borderColor: 'divider',
+                            display: 'flex',
+                            flexWrap: 'wrap',
+                            gap: 2,
+                            p: 2,
                         } }
                     >
-                        <Typography
-                            noWrap
-                            variant = { 'h6' }
-                        >
-                            { this.state.name || this.props.identifier }
-                        </Typography>
-                        <Typography
-                            color = { 'text.secondary' }
-                            noWrap
-                            variant = { 'body2' }
-                        >
-                            { this.props.identifier }
-                        </Typography>
-                    </Box>
-                    <FormControlLabel
-                        control = {
-                            <Switch
-                                checked = { this.state.live }
-                                color = { 'success' }
-                                onChange = { this.handleLiveToggle }
+                        { this.state.boxart &&
+                            <img
+                                key = { this.state.boxart }
+                                onError = { this.handleBoxartError }
+                                src = { this.state.boxart }
+                                style = { styles.boxartThumb }
                             />
                         }
-                        label = { this.state.live ? 'Indexing' : 'Disabled' }
-                        labelPlacement = { 'start' }
-                    />
-                </Box>
-                <Box
-                    sx = { {
-                        display: 'flex',
-                        flexDirection: 'column',
-                        gap: 2,
-                        p: 2,
-                    } }
-                >
-                    <Box
-                        sx = { fieldGridSx }
-                    >
-                        { this.renderTextField( TEXT_FIELDS[ 0 ] ) }
-                        { this.renderTextField( TEXT_FIELDS[ 1 ] ) }
-                        <TextField
-                            disabled
-                            label = { 'Identifier' }
-                            size = { 'small' }
-                            value = { this.props.identifier }
-                            variant = { 'outlined' }
+                        <Box
+                            sx = { {
+                                flexGrow: 1,
+                                minWidth: 0,
+                            } }
+                        >
+                            { this.renderEditableField( 'name', {
+                                label: 'Name',
+                                placeholder: this.props.identifier,
+                                variant: 'h6',
+                            } ) }
+                            <Box
+                                sx = { {
+                                    display: 'flex',
+                                    flexWrap: 'wrap',
+                                    gap: 3,
+                                    mt: 0.5,
+                                } }
+                            >
+                                { this.renderEditableField( 'shortName', {
+                                    color: 'text.secondary',
+                                    label: 'Short name',
+                                    placeholder: '—',
+                                    variant: 'body2',
+                                } ) }
+                                <Box>
+                                    { this.renderFieldLabel( 'Identifier' ) }
+                                    <Typography
+                                        color = { 'text.secondary' }
+                                        noWrap
+                                        variant = { 'body2' }
+                                    >
+                                        { this.props.identifier }
+                                    </Typography>
+                                </Box>
+                            </Box>
+                        </Box>
+                        <BoxartPicker
+                            key = { this.props.identifier }
+                            onChange = { ( url ) => {
+                                this.handleFieldChange( 'boxart', url );
+                            } }
+                            value = { this.state.boxart }
                         />
                         <TextField
                             label = { 'Default theme' }
                             onChange = { this.handleThemeChange }
                             select
                             size = { 'small' }
+                            sx = { {
+                                flexShrink: 0,
+                                width: 150,
+                            } }
                             value = { this.state.defaultTheme }
                             variant = { 'outlined' }
                         >
@@ -342,57 +388,80 @@ class GameInfo extends React.Component {
                                 { 'Light' }
                             </MenuItem>
                         </TextField>
+                        <FormControlLabel
+                            control = {
+                                <Switch
+                                    checked = { this.state.live }
+                                    color = { 'success' }
+                                    onChange = { this.handleLiveToggle }
+                                />
+                            }
+                            label = { this.state.live ? 'Indexing' : 'Disabled' }
+                            labelPlacement = { 'start' }
+                            sx = { {
+                                flexShrink: 0,
+                                ml: 0,
+                            } }
+                        />
                     </Box>
-                    <BoxartPicker
-                        key = { this.props.identifier }
-                        onChange = { ( url ) => {
-                            this.handleFieldChange( 'boxart', url );
+                    <Box
+                        sx = { {
+                            display: 'flex',
+                            flexDirection: 'column',
+                            gap: 2,
+                            p: 2,
                         } }
-                        value = { this.state.boxart }
-                    />
+                    >
+                        <Box>
+                            <Button
+                                color = { 'inherit' }
+                                onClick = { this.handleToggleAdvanced }
+                                size = { 'small' }
+                                startIcon = { this.state.advancedOpen
+                                    ? <ExpandLessIcon />
+                                    : <ExpandMoreIcon /> }
+                            >
+                                { 'Advanced (raw JSON)' }
+                            </Button>
+                            <Collapse
+                                in = { this.state.advancedOpen }
+                            >
+                                <TextField
+                                    error = { Boolean( this.state.advancedError ) }
+                                    fullWidth
+                                    helperText = { this.state.advancedError || 'Any other config keys not shown above' }
+                                    multiline
+                                    onChange = { this.handleAdvancedChange }
+                                    rows = { 11 }
+                                    size = { 'small' }
+                                    sx = { {
+                                        mt: 1,
+                                    } }
+                                    value = { this.state.advancedText }
+                                    variant = { 'outlined' }
+                                />
+                            </Collapse>
+                        </Box>
+                    </Box>
+                </Paper>
+                <Paper
+                    elevation = { 2 }
+                    sx = { {
+                        mt: 2,
+                        p: 2,
+                    } }
+                >
                     <GameSources
                         onChange = { this.handleSourcesChange }
                         sources = { this.state.sources }
                     />
-                    <Box>
-                        <Button
-                            color = { 'inherit' }
-                            onClick = { this.handleToggleAdvanced }
-                            size = { 'small' }
-                            startIcon = { this.state.advancedOpen
-                                ? <ExpandLessIcon />
-                                : <ExpandMoreIcon /> }
-                        >
-                            { 'Advanced (raw JSON)' }
-                        </Button>
-                        <Collapse
-                            in = { this.state.advancedOpen }
-                        >
-                            <TextField
-                                error = { Boolean( this.state.advancedError ) }
-                                fullWidth
-                                helperText = { this.state.advancedError || 'Any other config keys not shown above' }
-                                multiline
-                                onChange = { this.handleAdvancedChange }
-                                rows = { 11 }
-                                size = { 'small' }
-                                sx = { {
-                                    mt: 1,
-                                } }
-                                value = { this.state.advancedText }
-                                variant = { 'outlined' }
-                            />
-                        </Collapse>
-                    </Box>
-                </Box>
+                </Paper>
                 <Box
                     sx = { {
-                        borderColor: 'divider',
-                        borderTop: 1,
                         display: 'flex',
                         gap: 1,
                         justifyContent: 'flex-end',
-                        p: 2,
+                        mt: 2,
                     } }
                 >
                     <Button
@@ -409,7 +478,7 @@ class GameInfo extends React.Component {
                         { 'Save changes' }
                     </Button>
                 </Box>
-            </Paper>
+            </Box>
         );
     }
 }
