@@ -48,6 +48,7 @@ const KNOWN_SOURCE_TYPES = [
     'Steam',
     'Strapi',
     'Twitter',
+    'XenForo',
 ];
 
 const KNOWN_SOURCE_FIELDS = [
