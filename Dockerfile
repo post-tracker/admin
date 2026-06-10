@@ -22,6 +22,7 @@ RUN npm ci --omit=dev
 COPY server.js ./
 COPY queues.js ./
 COPY bullBoard.js ./
+COPY twitch.js ./
 COPY --from=builder /usr/src/app/web ./web
 
 EXPOSE 4000
