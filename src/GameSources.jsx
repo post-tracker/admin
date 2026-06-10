@@ -41,6 +41,7 @@ const KNOWN_SOURCE_TYPES = [
     'Discourse',
     'Instagram',
     'InvisionPowerBoard',
+    'Reddit',
     'rsi',
     'RSS',
     'SimpleMachinesForum',
