@@ -20,6 +20,15 @@ const EMPTY_GAME = {
     shortName: '',
 };
 
+// Turn a display name into a URL-safe identifier: lowercase, non-alphanumeric
+// runs collapsed to single hyphens, no leading/trailing hyphens.
+const slugify = function slugify ( name ) {
+    return name
+        .toLowerCase()
+        .replace( /[^a-z0-9]+/g, '-' )
+        .replace( /^-+|-+$/g, '' );
+};
+
 class AddGame extends React.Component {
     constructor ( props ) {
         super( props );
@@ -28,6 +37,10 @@ class AddGame extends React.Component {
         this.handleInputChange = this.handleInputChange.bind( this );
         this.handleBoxartChange = this.handleBoxartChange.bind( this );
         this.handleSaveGame = this.handleSaveGame.bind( this );
+
+        // Track which mirror fields the user has typed into directly, so the
+        // name-driven autofill stops overwriting them once they're customised.
+        this.touched = { identifier: false, shortName: false };
 
         this.state = Object.assign( { showCreate: false }, EMPTY_GAME );
     }
@@ -46,6 +59,7 @@ class AddGame extends React.Component {
 
         api.post( '/games', newGame )
             .then( () => {
+                this.touched = { identifier: false, shortName: false };
                 this.setState( Object.assign( { showCreate: false }, EMPTY_GAME ) );
 
                 window.snackbarText = 'Game added';
@@ -59,8 +73,26 @@ class AddGame extends React.Component {
     }
 
     handleInputChange ( event ) {
+        const { name, value } = event.target;
+
+        if ( name === 'name' ) {
+            // Mirror the name into shortName/identifier until the user edits
+            // those fields themselves.
+            this.setState( ( state ) => ( {
+                name: value,
+                shortName: this.touched.shortName ? state.shortName : value,
+                identifier: this.touched.identifier ? state.identifier : slugify( value ),
+            } ) );
+
+            return;
+        }
+
+        if ( name === 'shortName' || name === 'identifier' ) {
+            this.touched[ name ] = true;
+        }
+
         this.setState( {
-            [ event.target.name ]: event.target.value,
+            [ name ]: value,
         } );
     }
 
@@ -71,8 +103,17 @@ class AddGame extends React.Component {
     }
 
     handleShowCreate () {
+        // Reset the autofill tracking alongside the form fields when the
+        // dialog is dismissed so the next open starts clean.
+        if ( this.state.showCreate ) {
+            this.touched = { identifier: false, shortName: false };
+            this.setState( Object.assign( { showCreate: false }, EMPTY_GAME ) );
+
+            return;
+        }
+
         this.setState( {
-            showCreate: !this.state.showCreate,
+            showCreate: true,
         } );
     }
 
