@@ -76,12 +76,14 @@ const ALWAYS_SHOWN_KEYS = [ 'type', 'disabled' ];
 //     (CommLink, Discourse, InvisionPowerBoard, RSS, SimpleMachinesForum,
 //     Strapi, XenForo).
 //   - allowedSections: Steam derives its app ID from allowedSections[0], so the
-//     feed yields nothing until it's set.
-//   - account-driven sources (Reddit, Twitter, Instagram, rsi, Bungie.net,
+//     feed yields nothing until it's set. Reddit also filters on it (the
+//     subreddit whitelist, via validate-post), so it's seeded there too as a
+//     starting point — empty means "all", matching Steam's section semantics.
+//   - the remaining account-driven sources (Twitter, Instagram, rsi, Bungie.net,
 //     BattleNet) read no source config beyond `type` — the account identifier
-//     drives them — so they seed nothing extra (e.g. Reddit gets no endpoint).
-// Everything optional (label, section filters, Strapi field mappings, …) is
-// left off and added on demand via "Add field".
+//     drives them — so they seed nothing extra (e.g. they get no endpoint).
+// Everything optional (label, extra section filters, Strapi field mappings, …)
+// is left off and added on demand via "Add field".
 const REQUIRED_FIELDS_BY_TYPE = {
     'BattleNet': [],
     'Bungie.net': [],
@@ -89,7 +91,7 @@ const REQUIRED_FIELDS_BY_TYPE = {
     'Discourse': [ 'endpoint' ],
     'Instagram': [],
     'InvisionPowerBoard': [ 'endpoint' ],
-    'Reddit': [],
+    'Reddit': [ 'allowedSections' ],
     'RSS': [ 'endpoint' ],
     'rsi': [],
     'SimpleMachinesForum': [ 'endpoint' ],
@@ -145,6 +147,10 @@ const endpointHelp = function endpointHelp ( type ) {
 const allowedSectionsHelp = function allowedSectionsHelp ( type ) {
     if ( type === 'Steam' ) {
         return 'Steam app ID(s).';
+    }
+
+    if ( type === 'Reddit' ) {
+        return 'Only index posts from these subreddits. Leave empty for all.';
     }
 
     return 'Only index posts from these sections. Leave empty for all.';
