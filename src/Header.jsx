@@ -54,7 +54,7 @@ Header.displayName = 'Header';
 Header.propTypes = {
     actions: PropTypes.node,
     onNavigate: PropTypes.func.isRequired,
-    view: PropTypes.oneOf( [ 'dashboard', 'games', 'tokens' ] ).isRequired,
+    view: PropTypes.oneOf( [ 'dashboard', 'games', 'game-finder', 'tokens' ] ).isRequired,
 };
 
 export default Header;

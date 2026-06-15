@@ -30,6 +30,10 @@ const NavTabs = ( props ) => {
                 value = { 'games' }
             />
             <Tab
+                label = { 'Game Finder' }
+                value = { 'game-finder' }
+            />
+            <Tab
                 label = { 'Tokens' }
                 value = { 'tokens' }
             />
@@ -41,7 +45,7 @@ NavTabs.displayName = 'NavTabs';
 
 NavTabs.propTypes = {
     onNavigate: PropTypes.func.isRequired,
-    view: PropTypes.oneOf( [ 'dashboard', 'games', 'tokens' ] ).isRequired,
+    view: PropTypes.oneOf( [ 'dashboard', 'games', 'game-finder', 'tokens' ] ).isRequired,
 };
 
 export default NavTabs;

@@ -5,6 +5,7 @@ import express from 'express';
 
 import { getQueueCounts } from './queues.js';
 import { isConfigured as twitchConfigured, searchGames } from './twitch.js';
+import { addIgnore, discover as discoverGames, removeIgnore } from './gameFinder.js';
 import { createQueuesRouter } from './bullBoard.js';
 
 const QUEUES_BASE_PATH = '/queues';
@@ -79,6 +80,49 @@ const twitchGamesPlugin = {
     },
 };
 
+// Mirrors server.js's /api/game-finder routes in dev so the Game Finder page
+// works under `vite`. The middleware is mounted at the base path, so the
+// sub-path (/ignore, /unignore) arrives in request.url; ?force=1 bypasses the
+// server-side cache and ?name=… carries the ignore target.
+const gameFinderPlugin = {
+    name: 'dev-api-game-finder',
+    configureServer ( server ) {
+        server.middlewares.use( '/api/game-finder', async ( request, response ) => {
+            response.setHeader( 'Content-Type', 'application/json' );
+
+            const url = new URL( request.url, 'http://localhost' );
+            const name = url.searchParams.get( 'name' ) || '';
+
+            try {
+                if ( url.pathname.startsWith( '/ignore' ) ) {
+                    response.end( JSON.stringify( {
+                        ignored: addIgnore( name ),
+                    } ) );
+
+                    return;
+                }
+
+                if ( url.pathname.startsWith( '/unignore' ) ) {
+                    response.end( JSON.stringify( {
+                        ignored: removeIgnore( name ),
+                    } ) );
+
+                    return;
+                }
+
+                response.end( JSON.stringify( await discoverGames( {
+                    force: url.searchParams.get( 'force' ) === '1',
+                } ) ) );
+            } catch ( finderError ) {
+                response.statusCode = 500;
+                response.end( JSON.stringify( {
+                    error: finderError.message,
+                } ) );
+            }
+        } );
+    },
+};
+
 // Mirrors server.js's Bull Board mount in dev so /queues works under `vite`.
 // Bull Board's router needs Express semantics (ejs render / express.static), so
 // it's mounted on a tiny Express sub-app rather than directly on Vite's connect
@@ -127,6 +171,7 @@ export default defineConfig( {
         apiTokenPlugin,
         apiQueuesPlugin,
         twitchGamesPlugin,
+        gameFinderPlugin,
         bullBoardPlugin,
     ],
     build: {

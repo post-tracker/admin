@@ -6,6 +6,7 @@ import CssBaseline from '@mui/material/CssBaseline';
 
 import Dashboard from './Dashboard.jsx';
 import Games from './Games.jsx';
+import GameFinder from './GameFinder.jsx';
 import Tokens from './Tokens.jsx';
 
 const theme = createTheme( {
@@ -142,6 +143,10 @@ const App = () => {
                     <Route
                         element = { <RoutedGames /> }
                         path = { '/games/:gameId' }
+                    />
+                    <Route
+                        element = { <RoutedView component = { GameFinder } /> }
+                        path = { '/game-finder' }
                     />
                     <Route
                         element = { <RoutedView component = { Tokens } /> }

@@ -35,7 +35,7 @@ export default [
         },
     },
     {
-        files: [ 'server.js', 'queues.js', 'twitch.js', 'vite.config.js', 'eslint.config.js' ],
+        files: [ 'server.js', 'queues.js', 'twitch.js', 'steam.js', 'gameFinder.js', 'ignoreStore.js', 'vite.config.js', 'eslint.config.js' ],
         languageOptions: {
             ecmaVersion: 'latest',
             sourceType: 'module',

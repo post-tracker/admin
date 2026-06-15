@@ -3,3 +3,6 @@ node_modules/
 
 # Vite build output (built in CI / Docker, not committed)
 web/
+
+# Game Finder ignore-list store (runtime data; mounted on a volume in prod)
+data/

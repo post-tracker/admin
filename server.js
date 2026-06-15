@@ -7,6 +7,7 @@ import cookieParser from 'cookie-parser';
 
 import { getQueueCounts } from './queues.js';
 import { isConfigured as twitchConfigured, searchGames } from './twitch.js';
+import { addIgnore, discover as discoverGames, removeIgnore } from './gameFinder.js';
 import { createQueuesRouter } from './bullBoard.js';
 
 const LISTEN_PORT = 4000;
@@ -63,6 +64,38 @@ app.get( '/api/twitch-games', async ( request, response ) => {
             error: 'Twitch lookup failed',
         } );
     }
+} );
+
+// Game Finder discovery scan: untracked games trending on Twitch / topping
+// Steam's Early Access sellers. Runs server-side (Twitch secret + Steam CORS),
+// result cached ~10 min; ?force=1 (the Rescan button) bypasses the cache. An
+// unconfigured Twitch just yields Steam-only results, so no 503.
+app.get( '/api/game-finder', async ( request, response ) => {
+    try {
+        response.json( await discoverGames( {
+            force: request.query.force === '1',
+        } ) );
+    } catch ( finderError ) {
+        console.error( finderError );
+        response.status( INTERNAL_SERVER_ERROR ).json( {
+            error: 'Game finder scan failed',
+        } );
+    }
+} );
+
+// Add / remove a game from the persistent ignore list. The name is passed in
+// the query string (not a JSON body) so the dev-server middleware can mirror
+// this without body parsing. Returns the updated ignore list.
+app.post( '/api/game-finder/ignore', ( request, response ) => {
+    response.json( {
+        ignored: addIgnore( request.query.name || '' ),
+    } );
+} );
+
+app.post( '/api/game-finder/unignore', ( request, response ) => {
+    response.json( {
+        ignored: removeIgnore( request.query.name || '' ),
+    } );
 } );
 
 // The full Bull Board UI, behind the same basic auth the rest of the admin sits
