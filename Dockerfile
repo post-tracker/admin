@@ -23,6 +23,10 @@ COPY server.js ./
 COPY queues.js ./
 COPY bullBoard.js ./
 COPY twitch.js ./
+COPY reddit.js ./
+COPY steam.js ./
+COPY gameFinder.js ./
+COPY ignoreStore.js ./
 COPY --from=builder /usr/src/app/web ./web
 
 EXPOSE 4000
