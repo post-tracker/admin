@@ -18,6 +18,8 @@ import AddIcon from '@mui/icons-material/Add';
 import DeleteIcon from '@mui/icons-material/Delete';
 import LanguageIcon from '@mui/icons-material/Language';
 
+import RedditFlairEditor from './RedditFlairEditor.jsx';
+
 // A type-aware editor for the per-game `sources` object:
 //   { ServiceName: { allowedSections: [...], type, label, endpoint, disabled, ... } }
 // Each source gets a tab; the selected source's fields are grouped into an
@@ -61,7 +63,10 @@ const KNOWN_SOURCE_FIELDS = [
 // Keys the editor models with a dedicated control somewhere in the layout
 // (header / Connection / Sections). Anything NOT in this set is a custom key and
 // falls through to the Advanced group's generic value-kind editor.
-const STRUCTURED_KEYS = [ 'type', 'label', 'endpoint', 'allowedSections', 'disallowedSections', 'disabled' ];
+// `flair` is the per-subreddit Reddit flair config; it has its own editor
+// (RedditFlairEditor) rather than the generic value editors, so it's treated as
+// structured to keep it out of the Custom group and the "Add field" menu.
+const STRUCTURED_KEYS = [ 'type', 'label', 'endpoint', 'allowedSections', 'disallowedSections', 'disabled', 'flair' ];
 
 // Keys with a dedicated control in the identity header, so they're never offered
 // in the "Add field" menu. Everything else (endpoint, label, the section lists)
@@ -734,6 +739,36 @@ class GameSources extends React.Component {
         } );
     }
 
+    // Reddit is the only source whose `type`/name routes to a finder that uses
+    // flair, so the flair editor is shown only for it. Matches how the rest of
+    // this file keys Reddit behaviour off the (possibly name-derived) type.
+    isRedditSource ( service, serviceValue ) {
+        return ( serviceValue.type || service ) === 'Reddit';
+    }
+
+    // Per-subreddit flair editor, keyed off the source's allowedSections. Writing
+    // back drops the `flair` key entirely when emptied, to keep the config clean.
+    renderFlairGroup ( service, serviceValue ) {
+        return (
+            <React.Fragment>
+                { this.renderGroupHeader( 'Developer flair', false ) }
+                <RedditFlairEditor
+                    flair = { serviceValue.flair || {} }
+                    onChange = { ( nextFlair ) => {
+                        if ( Object.keys( nextFlair ).length === 0 ) {
+                            this.removeField( service, 'flair' );
+
+                            return;
+                        }
+
+                        this.updateField( service, 'flair', nextFlair );
+                    } }
+                    subreddits = { Array.isArray( serviceValue.allowedSections ) ? serviceValue.allowedSections : [] }
+                />
+            </React.Fragment>
+        );
+    }
+
     renderPanel ( service ) {
         const serviceValue = this.props.sources[ service ] || {};
 
@@ -773,6 +808,7 @@ class GameSources extends React.Component {
                     { groups.map( ( group, index ) => {
                         return this.renderGroup( group[ 0 ], group[ 1 ], index === 0 );
                     } ) }
+                    { this.isRedditSource( service, serviceValue ) && this.renderFlairGroup( service, serviceValue ) }
                     { this.renderAddField( service ) }
                 </Box>
             </Box>

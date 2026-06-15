@@ -7,6 +7,7 @@ import cookieParser from 'cookie-parser';
 
 import { getQueueCounts } from './queues.js';
 import { isConfigured as twitchConfigured, searchGames } from './twitch.js';
+import { sampleFlairs } from './reddit.js';
 import { addIgnore, discover as discoverGames, removeIgnore } from './gameFinder.js';
 import { createQueuesRouter } from './bullBoard.js';
 
@@ -62,6 +63,21 @@ app.get( '/api/twitch-games', async ( request, response ) => {
         console.error( twitchError );
         response.status( INTERNAL_SERVER_ERROR ).json( {
             error: 'Twitch lookup failed',
+        } );
+    }
+} );
+
+// Subreddit flair sampler for the Reddit flair editor (see reddit.js). The
+// browser can't read reddit.com (CORS), so the scan happens here. No credentials
+// needed — uses the public .json endpoints — so a failure is a real upstream
+// error (rate limit, banned/empty subreddit), reported as 500.
+app.get( '/api/reddit-flairs', async ( request, response ) => {
+    try {
+        response.json( await sampleFlairs( request.query.subreddit ) );
+    } catch ( redditError ) {
+        console.error( redditError );
+        response.status( INTERNAL_SERVER_ERROR ).json( {
+            error: 'Reddit flair scan failed',
         } );
     }
 } );

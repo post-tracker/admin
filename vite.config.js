@@ -5,6 +5,7 @@ import express from 'express';
 
 import { getQueueCounts } from './queues.js';
 import { isConfigured as twitchConfigured, searchGames } from './twitch.js';
+import { sampleFlairs } from './reddit.js';
 import { addIgnore, discover as discoverGames, removeIgnore } from './gameFinder.js';
 import { createQueuesRouter } from './bullBoard.js';
 
@@ -74,6 +75,28 @@ const twitchGamesPlugin = {
                 response.statusCode = 500;
                 response.end( JSON.stringify( {
                     error: twitchError.message,
+                } ) );
+            }
+        } );
+    },
+};
+
+// Mirrors server.js's /api/reddit-flairs route in dev so the Reddit flair editor
+// works under `vite`. The subreddit arrives in request.url's query string.
+const redditFlairsPlugin = {
+    name: 'dev-api-reddit-flairs',
+    configureServer ( server ) {
+        server.middlewares.use( '/api/reddit-flairs', async ( request, response ) => {
+            response.setHeader( 'Content-Type', 'application/json' );
+
+            try {
+                const subreddit = new URL( request.url, 'http://localhost' ).searchParams.get( 'subreddit' );
+
+                response.end( JSON.stringify( await sampleFlairs( subreddit ) ) );
+            } catch ( redditError ) {
+                response.statusCode = 500;
+                response.end( JSON.stringify( {
+                    error: redditError.message,
                 } ) );
             }
         } );
@@ -171,6 +194,7 @@ export default defineConfig( {
         apiTokenPlugin,
         apiQueuesPlugin,
         twitchGamesPlugin,
+        redditFlairsPlugin,
         gameFinderPlugin,
         bullBoardPlugin,
     ],
