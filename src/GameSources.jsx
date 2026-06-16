@@ -801,7 +801,13 @@ class GameSources extends React.Component {
                 <Box
                     sx = { {
                         flexGrow: 1,
-                        maxWidth: FIELD_MAX_WIDTH,
+                        // Reddit sources host the flair editor, whose blocklist/scan
+                        // chips need the full panel width to flow horizontally instead
+                        // of stacking into a very tall column. Other source types keep
+                        // the comfortable reading cap; their scalar fields self-cap too.
+                        maxWidth: this.isRedditSource( service, serviceValue )
+                            ? 'none'
+                            : FIELD_MAX_WIDTH,
                         minWidth: 0,
                     } }
                 >

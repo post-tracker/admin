@@ -30,8 +30,6 @@ const FLAIR_TYPES = [
 
 const DEFAULT_TYPE = 'author_flair_css_class';
 
-const FIELD_MAX_WIDTH = 480;
-
 const normalise = function normalise ( value ) {
     return String( value ).trim().toLowerCase();
 };
@@ -270,7 +268,6 @@ class RedditFlairEditor extends React.Component {
                         borderBottom: 1,
                         borderColor: 'divider',
                     },
-                    maxWidth: FIELD_MAX_WIDTH,
                     pb: 2,
                     pt: 1.5,
                 } }
