@@ -272,21 +272,45 @@ class RedditFlairEditor extends React.Component {
                     pt: 1.5,
                 } }
             >
+                <Typography
+                    variant = { 'subtitle2' }
+                >
+                    { `r/${ subreddit }` }
+                </Typography>
                 <Box
                     sx = { {
                         alignItems: 'center',
                         display: 'flex',
                         gap: 1,
+                        mt: 1.5,
                     } }
                 >
-                    <Typography
-                        sx = { {
-                            flexGrow: 1,
+                    <TextField
+                        label = { 'Flair type' }
+                        onChange = { ( event ) => {
+                            this.updateConfig( subreddit, {
+                                type: event.target.value,
+                            } );
                         } }
-                        variant = { 'subtitle2' }
+                        select
+                        size = { 'small' }
+                        sx = { {
+                            width: 320,
+                        } }
+                        value = { config.type }
+                        variant = { 'outlined' }
                     >
-                        { `r/${ subreddit }` }
-                    </Typography>
+                        { FLAIR_TYPES.map( ( option ) => {
+                            return (
+                                <MenuItem
+                                    key = { option.value }
+                                    value = { option.value }
+                                >
+                                    { option.label }
+                                </MenuItem>
+                            );
+                        } ) }
+                    </TextField>
                     <Button
                         disabled = { scanning }
                         onClick = { () => {
@@ -298,33 +322,6 @@ class RedditFlairEditor extends React.Component {
                         { 'Scan subreddit' }
                     </Button>
                 </Box>
-                <TextField
-                    label = { 'Flair type' }
-                    onChange = { ( event ) => {
-                        this.updateConfig( subreddit, {
-                            type: event.target.value,
-                        } );
-                    } }
-                    select
-                    size = { 'small' }
-                    sx = { {
-                        mt: 1.5,
-                        width: 320,
-                    } }
-                    value = { config.type }
-                    variant = { 'outlined' }
-                >
-                    { FLAIR_TYPES.map( ( option ) => {
-                        return (
-                            <MenuItem
-                                key = { option.value }
-                                value = { option.value }
-                            >
-                                { option.label }
-                            </MenuItem>
-                        );
-                    } ) }
-                </TextField>
                 <Box
                     sx = { {
                         mt: 1.5,
