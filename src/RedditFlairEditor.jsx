@@ -188,12 +188,25 @@ class RedditFlairEditor extends React.Component {
 
         const type = this.configFor( subreddit ).type;
         const blocklist = this.configFor( subreddit ).blocklist;
-        const matching = scan.flairs.filter( ( flair ) => {
+        const ofType = scan.flairs.filter( ( flair ) => {
             return flair.type === type;
         } );
-        const otherType = scan.flairs.length - matching.length;
+        // Flairs already in the blocklist live in the field above; only surface
+        // the ones still treated as devs so the scan is a to-curate shortlist.
+        const matching = ofType.filter( ( flair ) => {
+            return !blocklist.includes( normalise( flair.value ) );
+        } );
+        const otherType = scan.flairs.length - ofType.length;
 
         if ( matching.length === 0 ) {
+            let emptyMessage = 'No author flairs seen in the recent posts sampled.';
+
+            if ( otherType > 0 ) {
+                emptyMessage = `No ${ type } flairs seen, but ${ otherType } of the other type were — try switching the flair type above.`;
+            } else if ( ofType.length > 0 ) {
+                emptyMessage = 'Every flair seen is already in the blocklist.';
+            }
+
             return (
                 <Typography
                     color = { 'text.secondary' }
@@ -202,9 +215,7 @@ class RedditFlairEditor extends React.Component {
                     } }
                     variant = { 'caption' }
                 >
-                    { otherType > 0
-                        ? `No ${ type } flairs seen, but ${ otherType } of the other type were — try switching the flair type above.`
-                        : 'No author flairs seen in the recent posts sampled.' }
+                    { emptyMessage }
                 </Typography>
             );
         }
@@ -223,7 +234,7 @@ class RedditFlairEditor extends React.Component {
                     } }
                     variant = { 'caption' }
                 >
-                    { 'Click a flair to exclude it (mark as not-a-dev). Filled = excluded; green = looks like a dev.' }
+                    { 'Click a flair to exclude it (move it to the blocklist). Green = looks like a dev; orange = looks like community.' }
                 </Typography>
                 <Box
                     sx = { {
@@ -233,21 +244,17 @@ class RedditFlairEditor extends React.Component {
                     } }
                 >
                     { matching.map( ( flair ) => {
-                        const excluded = blocklist.includes( normalise( flair.value ) );
-
                         return (
                             <Chip
-                                color = { excluded
-                                    ? 'default'
-                                    : ( flair.suggestion === 'dev' ? 'success' : 'warning' ) }
+                                color = { flair.suggestion === 'dev' ? 'success' : 'warning' }
                                 key = { flair.value }
                                 label = { `${ flair.value } (${ flair.count })` }
                                 onClick = { () => {
                                     this.toggleBlocked( subreddit, flair.value );
                                 } }
                                 size = { 'small' }
-                                title = { `${ excluded ? 'Excluded (not a dev)' : 'Treated as a dev' } · suggestion: ${ flair.suggestion } · worn by ${ flair.count } user(s): ${ flair.sampleUsers.join( ', ' ) }` }
-                                variant = { excluded ? 'filled' : 'outlined' }
+                                title = { `Treated as a dev · suggestion: ${ flair.suggestion } · worn by ${ flair.count } user(s): ${ flair.sampleUsers.join( ', ' ) }` }
+                                variant = { 'outlined' }
                             />
                         );
                     } ) }
@@ -322,6 +329,7 @@ class RedditFlairEditor extends React.Component {
                         { 'Scan subreddit' }
                     </Button>
                 </Box>
+                { this.renderScanResults( subreddit ) }
                 <Box
                     sx = { {
                         mt: 1.5,
@@ -349,7 +357,6 @@ class RedditFlairEditor extends React.Component {
                         value = { config.blocklist }
                     />
                 </Box>
-                { this.renderScanResults( subreddit ) }
             </Box>
         );
     }

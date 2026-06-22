@@ -239,9 +239,16 @@ class AddDeveloper extends React.Component {
     }
 
     render () {
-        const developerNicks = this.props.availableDevelopers.map( ( developer ) => {
-            return developer.nick;
-        } );
+        // A developer can have no nick (nullable in the DB). Drop those: a null
+        // in the Autocomplete options crashes MUI's default filter, which calls
+        // .toLowerCase() on every option label — white-screening the whole admin.
+        const developerNicks = this.props.availableDevelopers
+            .map( ( developer ) => {
+                return developer.nick;
+            } )
+            .filter( ( nick ) => {
+                return typeof nick === 'string' && nick.length > 0;
+            } );
 
         const attachingToExisting = Boolean( this.state.existingDeveloperId );
 
