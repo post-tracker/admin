@@ -140,8 +140,8 @@ class RedditFlairEditor extends React.Component {
     }
 
     // The scanned flairs of the subreddit's chosen type, as click-to-toggle chips.
-    // A chip in the blocklist is filled ("excluded"); otherwise it's outlined and
-    // coloured by the dev/community suggestion. Clicking moves it in/out.
+    // Only flairs not already in the blocklist are shown — each is treated as a dev
+    // until excluded. Clicking moves it into the blocklist.
     renderScanResults ( subreddit ) {
         const scan = this.state.scans[ subreddit ];
 
@@ -199,7 +199,7 @@ class RedditFlairEditor extends React.Component {
         const otherType = scan.flairs.length - ofType.length;
 
         if ( matching.length === 0 ) {
-            let emptyMessage = 'No author flairs seen in the recent posts sampled.';
+            let emptyMessage = 'No flairs seen in the recent posts and comments sampled.';
 
             if ( otherType > 0 ) {
                 emptyMessage = `No ${ type } flairs seen, but ${ otherType } of the other type were — try switching the flair type above.`;
@@ -234,7 +234,7 @@ class RedditFlairEditor extends React.Component {
                     } }
                     variant = { 'caption' }
                 >
-                    { 'Click a flair to exclude it (move it to the blocklist). Green = looks like a dev; orange = looks like community.' }
+                    { 'Each flair below is treated as a dev. Click one to exclude it (move it to the blocklist). The count is how many distinct users wore it in the sample.' }
                 </Typography>
                 <Box
                     sx = { {
@@ -246,14 +246,13 @@ class RedditFlairEditor extends React.Component {
                     { matching.map( ( flair ) => {
                         return (
                             <Chip
-                                color = { flair.suggestion === 'dev' ? 'success' : 'warning' }
                                 key = { flair.value }
                                 label = { `${ flair.value } (${ flair.count })` }
                                 onClick = { () => {
                                     this.toggleBlocked( subreddit, flair.value );
                                 } }
                                 size = { 'small' }
-                                title = { `Treated as a dev · suggestion: ${ flair.suggestion } · worn by ${ flair.count } user(s): ${ flair.sampleUsers.join( ', ' ) }` }
+                                title = { `Treated as a dev · worn by ${ flair.count } user(s): ${ flair.sampleUsers.join( ', ' ) }` }
                                 variant = { 'outlined' }
                             />
                         );
