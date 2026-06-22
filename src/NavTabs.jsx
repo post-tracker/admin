@@ -9,10 +9,15 @@ import Tabs from '@mui/material/Tabs';
 const NavTabs = ( props ) => {
     return (
         <Tabs
+            allowScrollButtonsMobile
             onChange = { ( event, value ) => {
                 props.onNavigate( value );
             } }
+            scrollButtons = { 'auto' }
             sx = { {
+                // Scrollable so the four tabs never squeeze the title/actions on
+                // a narrow phone — they scroll horizontally instead.
+                maxWidth: '100%',
                 mr: 2,
                 '& .MuiTab-root': {
                     minHeight: 64,
@@ -20,6 +25,7 @@ const NavTabs = ( props ) => {
                 },
             } }
             value = { props.view }
+            variant = { 'scrollable' }
         >
             <Tab
                 label = { 'Dashboard' }

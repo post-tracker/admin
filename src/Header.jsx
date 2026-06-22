@@ -18,7 +18,25 @@ const Header = ( props ) => {
             color = { 'default' }
             position = { 'static' }
         >
-            <Toolbar>
+            <Toolbar
+                sx = { {
+                    // On phones the title + tabs + actions don't fit one row, so
+                    // let the actions wrap onto their own full-width row below
+                    // (md+ keeps everything on a single line).
+                    flexWrap: {
+                        md: 'nowrap',
+                        xs: 'wrap',
+                    },
+                    gap: {
+                        md: 0,
+                        xs: 1,
+                    },
+                    py: {
+                        md: 0,
+                        xs: 1,
+                    },
+                } }
+            >
                 <Typography
                     noWrap
                     onClick = { () => {
@@ -28,7 +46,10 @@ const Header = ( props ) => {
                         cursor: 'pointer',
                         flexShrink: 0,
                         fontWeight: 700,
-                        mr: 4,
+                        mr: {
+                            md: 4,
+                            xs: 2,
+                        },
                     } }
                     variant = { 'h6' }
                 >
@@ -40,10 +61,23 @@ const Header = ( props ) => {
                 />
                 <Box
                     sx = { {
-                        flexGrow: 1,
+                        alignItems: 'center',
+                        display: 'flex',
+                        // Fill the row and right-align on desktop; drop to a full
+                        // width row of its own on mobile.
+                        flexBasis: {
+                            md: 'auto',
+                            xs: '100%',
+                        },
+                        gap: 1,
+                        justifyContent: 'flex-end',
+                        ml: {
+                            md: 'auto',
+                        },
                     } }
-                />
-                { props.actions }
+                >
+                    { props.actions }
+                </Box>
             </Toolbar>
         </AppBar>
     );

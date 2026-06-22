@@ -5,6 +5,7 @@ import cookie from 'react-cookies';
 import alphanumSort from 'alphanum-sort';
 
 import Autocomplete from '@mui/material/Autocomplete';
+import Box from '@mui/material/Box';
 import Snackbar from '@mui/material/Snackbar';
 import TextField from '@mui/material/TextField';
 
@@ -18,13 +19,6 @@ import api from './api.js';
 const INIT_LOAD_WAIT_TIMEOUT = 100;
 
 const styles = {
-    developersHeader: {
-        alignItems: 'center',
-        boxSizing: 'border-box',
-        display: 'flex',
-        justifyContent: 'space-between',
-        margin: '24px 40px 0',
-    },
     developersTitle: {
         fontSize: '1.25rem',
         fontWeight: 500,
@@ -36,12 +30,20 @@ const styles = {
         alignItems: 'start',
         boxSizing: 'border-box',
         display: 'grid',
-        gap: 20,
+        gap: {
+            sm: 2.5,
+            xs: 2,
+        },
         // Equal columns that share the row, so cards are all the same width and
-        // the grid fills edge to edge. The 40px side padding matches the game
-        // settings box above, lining both up on the left and right.
-        gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))',
-        padding: '20px 40px',
+        // the grid fills edge to edge. min(100%, 300px) keeps the track from
+        // exceeding the viewport on phones narrower than 300px (no h-scroll).
+        gridTemplateColumns: 'repeat(auto-fill, minmax(min(100%, 300px), 1fr))',
+        // Side padding matches the game settings box above on desktop; tighter
+        // on mobile so cards use the full screen width.
+        padding: {
+            sm: '20px 40px',
+            xs: '16px',
+        },
         width: '100%',
     },
 };
@@ -401,8 +403,16 @@ class Games extends React.Component {
                                     );
                                 } }
                                 sx = { {
-                                    mr: 2,
-                                    width: 260,
+                                    // Grow to fill the mobile actions row beside
+                                    // the Add-game button; fixed width on desktop.
+                                    flexGrow: {
+                                        sm: 0,
+                                        xs: 1,
+                                    },
+                                    minWidth: 0,
+                                    width: {
+                                        sm: 260,
+                                    },
                                 } }
                                 value = { currentGame }
                             />
@@ -419,15 +429,27 @@ class Games extends React.Component {
                     />
                 }
                 { currentGame &&
-                    <div
-                        style = { styles.developersHeader }
+                    <Box
+                        sx = { {
+                            alignItems: 'center',
+                            display: 'flex',
+                            flexWrap: 'wrap',
+                            gap: 2,
+                            justifyContent: 'space-between',
+                            // Tighter side margins on mobile so the filter and
+                            // Add-developer button aren't cramped into the middle.
+                            m: {
+                                sm: '24px 40px 0',
+                                xs: '16px 16px 0',
+                            },
+                        } }
                     >
-                        <div
-                            style = { {
+                        <Box
+                            sx = { {
                                 alignItems: 'center',
                                 display: 'flex',
                                 flex: 1,
-                                gap: 16,
+                                gap: 2,
                                 minWidth: 0,
                             } }
                         >
@@ -442,20 +464,23 @@ class Games extends React.Component {
                                 placeholder = { 'nick, name or group' }
                                 size = { 'small' }
                                 sx = { {
-                                    width: 260,
+                                    // Grow to fill on mobile, capped on desktop.
+                                    flexGrow: 1,
+                                    maxWidth: 260,
+                                    minWidth: 0,
                                 } }
                                 value = { this.state.filter }
                                 variant = { 'outlined' }
                             />
-                        </div>
+                        </Box>
                         { addNode }
-                    </div>
+                    </Box>
                 }
-                <div
-                    style = { styles.wrapper }
+                <Box
+                    sx = { styles.wrapper }
                 >
                     { this.getDevelopers() }
-                </div>
+                </Box>
                 <Snackbar
                     autoHideDuration = { 4000 }
                     message = { this.state.snackbarText }
