@@ -31,6 +31,9 @@ const styles = {
         margin: 0,
     },
     wrapper: {
+        // Top-align so expanding one card to its full editor height doesn't
+        // stretch the collapsed cards sharing its row.
+        alignItems: 'start',
         boxSizing: 'border-box',
         display: 'grid',
         gap: 20,
@@ -52,6 +55,7 @@ class Games extends React.Component {
         this.getGamesData = this.getGamesData.bind( this );
         this.getCurrentGame = this.getCurrentGame.bind( this );
         this.handleGamePick = this.handleGamePick.bind( this );
+        this.handleFilterChange = this.handleFilterChange.bind( this );
         this.handleSnackbarClose = this.handleSnackbarClose.bind( this );
         this.openSnackbar = this.openSnackbar.bind( this );
 
@@ -59,6 +63,7 @@ class Games extends React.Component {
 
         this.state = {
             developers: {},
+            filter: '',
             gameId: false,
             games: [],
             prefill: this.readPrefillFromUrl(),
@@ -172,6 +177,12 @@ class Games extends React.Component {
         }
     }
 
+    handleFilterChange ( event ) {
+        this.setState( {
+            filter: event.target.value,
+        } );
+    }
+
     openSnackbar () {
         this.setState( {
             snackbarOpen: true,
@@ -279,32 +290,43 @@ class Games extends React.Component {
         return true;
     }
 
+    // Case-insensitive substring match across the fields shown on a card.
+    matchesFilter ( developer, needle ) {
+        return [ developer.nick, developer.name, developer.group ].some( ( field ) => {
+            return field && String( field ).toLowerCase().includes( needle );
+        } );
+    }
+
     getDevelopers () {
-        const developerNodes = [];
+        // developers starts as {} and becomes an array once loaded.
+        const developers = Array.isArray( this.state.developers ) ? this.state.developers : [];
+        const needle = this.state.filter.trim().toLowerCase();
 
-        for ( const developerId in this.state.developers ) {
-            if ( !Reflect.apply( {}.hasOwnProperty, this.state.developers, [ developerId ] ) ) {
-                continue;
-            }
-
-            developerNodes.push(
-                <Developer
-                    { ...this.state.developers[ developerId ] }
-                    availableDevelopers = { this.state.developers }
-                    availableGroups = { this.state.groups }
-                    availableServices = { this.state.services }
-                    gameId = { this.state.gameId }
-                    key = { developerId }
-                />
-            );
-        }
-
-        return developerNodes;
+        return developers
+            .filter( ( developer ) => {
+                return needle === '' || this.matchesFilter( developer, needle );
+            } )
+            .map( ( developer ) => {
+                // Cards render as cheap read-only summaries until clicked, so the
+                // whole roster (Star Citizen ~200, CS:GO ~240) mounts and scrolls
+                // cheaply; only the expanded card mounts the heavy MUI editor.
+                return (
+                    <Developer
+                        { ...developer }
+                        availableDevelopers = { developers }
+                        availableGroups = { this.state.groups }
+                        availableServices = { this.state.services }
+                        gameId = { this.state.gameId }
+                        key = { developer.id }
+                    />
+                );
+            } );
     }
 
     selectGame ( identifier ) {
         const newState = {
             developers: {},
+            filter: '',
             gameId: identifier,
         };
 
@@ -400,11 +422,32 @@ class Games extends React.Component {
                     <div
                         style = { styles.developersHeader }
                     >
-                        <h2
-                            style = { styles.developersTitle }
+                        <div
+                            style = { {
+                                alignItems: 'center',
+                                display: 'flex',
+                                flex: 1,
+                                gap: 16,
+                                minWidth: 0,
+                            } }
                         >
-                            { 'Developers' }
-                        </h2>
+                            <h2
+                                style = { styles.developersTitle }
+                            >
+                                { 'Developers' }
+                            </h2>
+                            <TextField
+                                label = { 'Filter developers' }
+                                onChange = { this.handleFilterChange }
+                                placeholder = { 'nick, name or group' }
+                                size = { 'small' }
+                                sx = { {
+                                    width: 260,
+                                } }
+                                value = { this.state.filter }
+                                variant = { 'outlined' }
+                            />
+                        </div>
                         { addNode }
                     </div>
                 }

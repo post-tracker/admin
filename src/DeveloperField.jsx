@@ -8,7 +8,6 @@ import Button from '@mui/material/Button';
 import Divider from '@mui/material/Divider';
 import TextField from '@mui/material/TextField';
 import IconButton from '@mui/material/IconButton';
-import Autocomplete from '@mui/material/Autocomplete';
 import DeleteIcon from '@mui/icons-material/Delete';
 import SaveIcon from '@mui/icons-material/Save';
 
@@ -114,42 +113,42 @@ class DeveloperField extends React.Component {
     }
 
     getInputField () {
-        if ( this.props.availableOptions.length > 0 ) {
-            return (
-                <Autocomplete
-                    filterOptions = { ( options ) => {
-                        return options;
-                    } }
-                    freeSolo
-                    inputValue = { String( this.state.newValue || this.props.value || '' ) }
-                    key = { `${ this.props.name }-${ this.props.value }` }
-                    onInputChange = { ( event, value ) => {
-                        this.handleValueChange( value );
-                    } }
-                    openOnFocus
-                    options = { this.props.availableOptions }
-                    renderInput = { ( params ) => {
-                        return (
-                            <TextField
-                                { ...params }
-                                label = { this.props.displayName || this.props.name }
-                                variant = { 'standard' }
-                            />
-                        );
-                    } }
-                />
-            );
-        }
+        // A plain text field, optionally backed by a native <datalist> for
+        // type-ahead suggestions. This used to be an MUI Autocomplete when there
+        // were options, but a card grid mounts hundreds of these and Autocomplete
+        // is heavy enough to make scrolling janky — a datalist gives the same
+        // suggest-while-typing UX for a fraction of the mount cost.
+        const hasOptions = this.props.availableOptions.length > 0;
+        const listId = hasOptions
+            ? `options-${ this.props.type }-${ this.props.id }-${ this.props.name }`
+            : undefined;
 
         return (
-            <TextField
-                defaultValue = { this.props.value }
-                key = { `${ this.props.name }-${ this.props.value }` }
-                label = { this.props.displayName || this.props.name }
-                name = { this.props.name }
-                onKeyUp = { this.handleValueChange }
-                variant = { 'standard' }
-            />
+            <React.Fragment>
+                <TextField
+                    defaultValue = { this.props.value }
+                    key = { `${ this.props.name }-${ this.props.value }` }
+                    label = { this.props.displayName || this.props.name }
+                    name = { this.props.name }
+                    onChange = { this.handleValueChange }
+                    slotProps = { hasOptions ? { htmlInput: { list: listId } } : undefined }
+                    variant = { 'standard' }
+                />
+                { hasOptions &&
+                    <datalist
+                        id = { listId }
+                    >
+                        { this.props.availableOptions.map( ( option ) => {
+                            return (
+                                <option
+                                    key = { option }
+                                    value = { option }
+                                />
+                            );
+                        } ) }
+                    </datalist>
+                }
+            </React.Fragment>
         );
     }
 

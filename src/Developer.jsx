@@ -18,6 +18,48 @@ import DeveloperField from './DeveloperField.jsx';
 import api from './api.js';
 
 const styles = {
+    // --- Collapsed (read-only) card: plain DOM, no MUI, so hundreds mount and
+    // scroll cheaply. Clicking it expands into the full editor. ---
+    collapsed: {
+        // contain-intrinsic-size lets the browser skip rendering off-screen cards
+        // (content-visibility) while keeping the scrollbar stable.
+        backgroundColor: '#fff',
+        boxShadow: '0 1px 3px rgba(0,0,0,0.12), 0 1px 2px rgba(0,0,0,0.24)',
+        boxSizing: 'border-box',
+        containIntrinsicSize: 'auto 200px',
+        contentVisibility: 'auto',
+        cursor: 'pointer',
+        padding: '16px 20px',
+        width: '100%',
+    },
+    collapsedAccount: {
+        color: '#616161',
+        fontSize: '0.85em',
+        overflow: 'hidden',
+        textOverflow: 'ellipsis',
+        whiteSpace: 'nowrap',
+    },
+    collapsedAccounts: {
+        marginTop: 8,
+    },
+    collapsedDot: {
+        borderRadius: '50%',
+        display: 'inline-block',
+        flexShrink: 0,
+        height: 10,
+        width: 10,
+    },
+    collapsedHeader: {
+        alignItems: 'center',
+        display: 'flex',
+        gap: 8,
+        justifyContent: 'space-between',
+    },
+    collapsedMeta: {
+        color: '#9e9e9e',
+        fontSize: '0.85em',
+        marginTop: 4,
+    },
     // Pins the add-account / merge actions to the bottom so they line up across
     // the equal-height cards in a row.
     footer: {
@@ -77,11 +119,38 @@ class Developer extends React.PureComponent {
         this.handleToggleMerge = this.handleToggleMerge.bind( this );
         this.handleMergeTargetChange = this.handleMergeTargetChange.bind( this );
         this.handleConfirmMerge = this.handleConfirmMerge.bind( this );
+        this.handleExpand = this.handleExpand.bind( this );
+        this.handleCollapse = this.handleCollapse.bind( this );
 
         this.state = {
+            // Collapsed by default: the card renders as cheap read-only text so a
+            // big roster scrolls smoothly. Expanding mounts the (heavy) MUI editor
+            // only for the card being worked on. See renderCollapsed().
+            expanded: false,
             mergeOpen: false,
             mergeTarget: false,
         };
+    }
+
+    handleExpand () {
+        this.setState( {
+            expanded: true,
+        } );
+    }
+
+    handleCollapse () {
+        this.setState( {
+            expanded: false,
+        } );
+    }
+
+    // Other developers of this game are the possible merge targets; a developer
+    // can't be merged into itself. Only built when the merge dialog is open, so
+    // the O(developers) filter stays off every card's normal render path.
+    getMergeTargets () {
+        return this.props.availableDevelopers.filter( ( developer ) => {
+            return developer.id !== this.props.id;
+        } );
     }
 
     getAccounts () {
@@ -155,13 +224,76 @@ class Developer extends React.PureComponent {
             } );
     }
 
-    render () {
-        // Other developers of this game are the possible merge targets; a
-        // developer can't be merged into itself.
-        const mergeTargets = this.props.availableDevelopers.filter( ( developer ) => {
-            return developer.id !== this.props.id;
-        } );
+    // Cheap read-only summary shown until the card is expanded for editing.
+    renderCollapsed () {
+        const thisLabel = this.props.nick || this.props.name;
+        const meta = [ this.props.group, this.props.role ].filter( Boolean ).join( ' · ' );
 
+        return (
+            <div
+                onClick = { this.handleExpand }
+                style = { styles.collapsed }
+                title = { 'Click to edit' }
+            >
+                <div
+                    style = { styles.collapsedHeader }
+                >
+                    <h3
+                        style = { styles.title }
+                    >
+                        <span
+                            style = { styles.titleName }
+                        >
+                            { thisLabel }
+                        </span>
+                        <span
+                            style = { styles.titleId }
+                        >
+                            { `- ${ this.props.id }` }
+                        </span>
+                    </h3>
+                    <span
+                        style = { {
+                            ...styles.collapsedDot,
+                            backgroundColor: this.props.active ? '#4caf50' : '#bdbdbd',
+                        } }
+                        title = { this.props.active ? 'Active' : 'Inactive' }
+                    />
+                </div>
+                { meta &&
+                    <div
+                        style = { styles.collapsedMeta }
+                    >
+                        { meta }
+                    </div>
+                }
+                { this.props.accounts.length > 0 &&
+                    <div
+                        style = { styles.collapsedAccounts }
+                    >
+                        { this.props.accounts.map( ( account ) => {
+                            return (
+                                <div
+                                    key = { `${ account.service }-${ account.identifier }` }
+                                    style = { styles.collapsedAccount }
+                                >
+                                    { `${ account.service }: ${ account.identifier }` }
+                                </div>
+                            );
+                        } ) }
+                    </div>
+                }
+            </div>
+        );
+    }
+
+    render () {
+        if ( !this.state.expanded ) {
+            return this.renderCollapsed();
+        }
+
+        // A developer can be merged into any other developer of this game.
+        const canMerge = this.props.availableDevelopers.length > 1;
         const thisLabel = this.props.nick || this.props.name;
 
         return (
@@ -174,7 +306,9 @@ class Developer extends React.PureComponent {
                     style = { styles.header }
                 >
                     <h3
-                        style = { styles.title }
+                        onClick = { this.handleCollapse }
+                        style = { { ...styles.title, cursor: 'pointer' } }
+                        title = { 'Click to collapse' }
                     >
                         <span
                             style = { styles.titleName }
@@ -240,7 +374,7 @@ class Developer extends React.PureComponent {
                         developerId = { this.props.id }
                         gameId = { this.props.gameId }
                     />
-                    { mergeTargets.length > 0 &&
+                    { canMerge &&
                         <Button
                             color = { 'secondary' }
                             onClick = { this.handleToggleMerge }
@@ -269,7 +403,7 @@ class Developer extends React.PureComponent {
                             } }
                             onChange = { this.handleMergeTargetChange }
                             openOnFocus
-                            options = { mergeTargets }
+                            options = { this.state.mergeOpen ? this.getMergeTargets() : [] }
                             renderInput = { ( params ) => {
                                 return (
                                     <TextField
