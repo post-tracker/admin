@@ -337,6 +337,10 @@ class RedditFlairEditor extends React.Component {
                     <Autocomplete
                         freeSolo
                         multiple
+                        // Some communities (Destiny ~250, Rocket League ~170) have
+                        // huge blocklists; collapse to a handful of chips + "+N" at
+                        // rest so the field doesn't become a wall of chips.
+                        limitTags = { 10 }
                         onChange = { ( event, newValue ) => {
                             this.setBlocklist( subreddit, newValue );
                         } }
@@ -346,12 +350,21 @@ class RedditFlairEditor extends React.Component {
                                 <TextField
                                     { ...params }
                                     helperText = { 'Flairs that are NOT developers. Anyone with another flair of the type above is treated as a dev.' }
-                                    label = { 'Blocklist (non-dev flairs)' }
+                                    label = { `Blocklist — ${ config.blocklist.length } non-dev flair${ config.blocklist.length === 1 ? '' : 's' }` }
                                     placeholder = { 'Type and press Enter' }
                                     size = { 'small' }
                                     variant = { 'outlined' }
                                 />
                             );
+                        } }
+                        // Bound the chip area when expanded (focused) too, so editing
+                        // a large blocklist scrolls within a few rows rather than
+                        // pushing the rest of the form far down the page.
+                        sx = { {
+                            '& .MuiAutocomplete-inputRoot': {
+                                maxHeight: 180,
+                                overflowY: 'auto',
+                            },
                         } }
                         value = { config.blocklist }
                     />
