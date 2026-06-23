@@ -12,6 +12,7 @@ import TextField from '@mui/material/TextField';
 import Developer from './Developer.jsx';
 import GameInfo from './GameInfo.jsx';
 import AddDeveloper from './AddDeveloper.jsx';
+import SteamDeveloperFinder from './SteamDeveloperFinder.jsx';
 import AddGame from './AddGame.jsx';
 import Header from './Header.jsx';
 import api from './api.js';
@@ -473,7 +474,27 @@ class Games extends React.Component {
                                 variant = { 'outlined' }
                             />
                         </Box>
-                        { addNode }
+                        <Box
+                            sx = { {
+                                alignItems: 'center',
+                                display: 'flex',
+                                flexWrap: 'wrap',
+                                gap: 2,
+                            } }
+                        >
+                            { currentGame &&
+                                <SteamDeveloperFinder
+                                    developers = { Array.isArray( this.state.developers ) ? this.state.developers : [] }
+                                    game = { currentGame }
+                                    onPickDeveloper = { ( prefill ) => {
+                                        this.setState( {
+                                            prefill: prefill,
+                                        } );
+                                    } }
+                                />
+                            }
+                            { addNode }
+                        </Box>
                     </Box>
                 }
                 <Box

@@ -8,6 +8,7 @@ import cookieParser from 'cookie-parser';
 import { getQueueCounts } from './queues.js';
 import { isConfigured as twitchConfigured, searchGames } from './twitch.js';
 import { sampleFlairs } from './reddit.js';
+import { findSteamDevelopers, resolveSteam, searchSteamGames } from './steam.js';
 import { addIgnore, discover as discoverGames, removeIgnore } from './gameFinder.js';
 import { createQueuesRouter } from './bullBoard.js';
 
@@ -78,6 +79,58 @@ app.get( '/api/reddit-flairs', async ( request, response ) => {
         console.error( redditError );
         response.status( INTERNAL_SERVER_ERROR ).json( {
             error: 'Reddit flair scan failed',
+        } );
+    }
+} );
+
+// Steam id resolver for the Game Sources editor: given a community id, vanity
+// slug, or Steam URL, returns the numeric app id (for the forum/discussions
+// scrape) and the announcement-feed item count. The browser can't read
+// steamcommunity.com (CORS), so the lookup happens here; see steam.js. No
+// credentials needed (public Steam pages), so a failure is a real upstream error.
+app.get( '/api/steam-resolve', async ( request, response ) => {
+    try {
+        response.json( await resolveSteam( request.query.id ) );
+    } catch ( steamError ) {
+        console.error( steamError );
+        response.status( INTERNAL_SERVER_ERROR ).json( {
+            error: 'Steam resolve failed',
+        } );
+    }
+} );
+
+// Steam game search for the Game Sources editor's Steam picker: given a name,
+// returns matching games ([{ appId, name, icon }]) so the admin picks one
+// instead of pasting a numeric app id. The browser can't read steamcommunity.com
+// (CORS), so the search happens here; see steam.js. No credentials needed (public
+// endpoint), so a failure is a real upstream error.
+app.get( '/api/steam-search', async ( request, response ) => {
+    try {
+        response.json( {
+            results: await searchSteamGames( request.query.q ),
+        } );
+    } catch ( steamError ) {
+        console.error( steamError );
+        response.status( INTERNAL_SERVER_ERROR ).json( {
+            error: 'Steam search failed',
+        } );
+    }
+} );
+
+// Steam developer finder for the Game Sources editor: given a numeric app id,
+// scrapes the discussions forum for Steam's own Developer-badged authors so the
+// admin can add a game's devs without hunting down each SteamID. The browser
+// can't read steamcommunity.com (CORS), so it happens here; see steam.js. No
+// credentials needed (public pages).
+app.get( '/api/steam-devs', async ( request, response ) => {
+    try {
+        response.json( {
+            developers: await findSteamDevelopers( request.query.appId ),
+        } );
+    } catch ( steamError ) {
+        console.error( steamError );
+        response.status( INTERNAL_SERVER_ERROR ).json( {
+            error: 'Steam developer lookup failed',
         } );
     }
 } );

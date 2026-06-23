@@ -6,6 +6,7 @@ import express from 'express';
 import { getQueueCounts } from './queues.js';
 import { isConfigured as twitchConfigured, searchGames } from './twitch.js';
 import { sampleFlairs } from './reddit.js';
+import { findSteamDevelopers, resolveSteam, searchSteamGames } from './steam.js';
 import { addIgnore, discover as discoverGames, removeIgnore } from './gameFinder.js';
 import { createQueuesRouter } from './bullBoard.js';
 
@@ -97,6 +98,79 @@ const redditFlairsPlugin = {
                 response.statusCode = 500;
                 response.end( JSON.stringify( {
                     error: redditError.message,
+                } ) );
+            }
+        } );
+    },
+};
+
+// Mirrors server.js's /api/steam-resolve route in dev so the Game Sources
+// editor's Steam app-id lookup works under `vite`. The id arrives in the query
+// string; no credentials needed (public Steam pages).
+const steamResolvePlugin = {
+    name: 'dev-api-steam-resolve',
+    configureServer ( server ) {
+        server.middlewares.use( '/api/steam-resolve', async ( request, response ) => {
+            response.setHeader( 'Content-Type', 'application/json' );
+
+            try {
+                const id = new URL( request.url, 'http://localhost' ).searchParams.get( 'id' );
+
+                response.end( JSON.stringify( await resolveSteam( id ) ) );
+            } catch ( steamError ) {
+                response.statusCode = 500;
+                response.end( JSON.stringify( {
+                    error: steamError.message,
+                } ) );
+            }
+        } );
+    },
+};
+
+// Mirrors server.js's /api/steam-search route in dev so the Game Sources
+// editor's Steam name picker works under `vite`. The term arrives in the query
+// string; no credentials needed (public Steam endpoint).
+const steamSearchPlugin = {
+    name: 'dev-api-steam-search',
+    configureServer ( server ) {
+        server.middlewares.use( '/api/steam-search', async ( request, response ) => {
+            response.setHeader( 'Content-Type', 'application/json' );
+
+            try {
+                const query = new URL( request.url, 'http://localhost' ).searchParams.get( 'q' );
+
+                response.end( JSON.stringify( {
+                    results: await searchSteamGames( query ),
+                } ) );
+            } catch ( steamError ) {
+                response.statusCode = 500;
+                response.end( JSON.stringify( {
+                    error: steamError.message,
+                } ) );
+            }
+        } );
+    },
+};
+
+// Mirrors server.js's /api/steam-devs route in dev so the Game Sources editor's
+// Steam developer finder works under `vite`. The numeric app id arrives in the
+// query string; no credentials needed (public Steam pages).
+const steamDevsPlugin = {
+    name: 'dev-api-steam-devs',
+    configureServer ( server ) {
+        server.middlewares.use( '/api/steam-devs', async ( request, response ) => {
+            response.setHeader( 'Content-Type', 'application/json' );
+
+            try {
+                const appId = new URL( request.url, 'http://localhost' ).searchParams.get( 'appId' );
+
+                response.end( JSON.stringify( {
+                    developers: await findSteamDevelopers( appId ),
+                } ) );
+            } catch ( steamError ) {
+                response.statusCode = 500;
+                response.end( JSON.stringify( {
+                    error: steamError.message,
                 } ) );
             }
         } );
@@ -195,6 +269,9 @@ export default defineConfig( {
         apiQueuesPlugin,
         twitchGamesPlugin,
         redditFlairsPlugin,
+        steamResolvePlugin,
+        steamSearchPlugin,
+        steamDevsPlugin,
         gameFinderPlugin,
         bullBoardPlugin,
     ],

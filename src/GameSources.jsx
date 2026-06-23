@@ -5,9 +5,14 @@ import Autocomplete from '@mui/material/Autocomplete';
 import Avatar from '@mui/material/Avatar';
 import Box from '@mui/material/Box';
 import Button from '@mui/material/Button';
+import CircularProgress from '@mui/material/CircularProgress';
 import Divider from '@mui/material/Divider';
 import FormControlLabel from '@mui/material/FormControlLabel';
 import IconButton from '@mui/material/IconButton';
+import InputAdornment from '@mui/material/InputAdornment';
+import List from '@mui/material/List';
+import ListItemButton from '@mui/material/ListItemButton';
+import ListItemText from '@mui/material/ListItemText';
 import MenuItem from '@mui/material/MenuItem';
 import Switch from '@mui/material/Switch';
 import Tab from '@mui/material/Tab';
@@ -17,6 +22,7 @@ import Typography from '@mui/material/Typography';
 import AddIcon from '@mui/icons-material/Add';
 import DeleteIcon from '@mui/icons-material/Delete';
 import LanguageIcon from '@mui/icons-material/Language';
+import SearchIcon from '@mui/icons-material/Search';
 
 import RedditFlairEditor from './RedditFlairEditor.jsx';
 
@@ -66,7 +72,9 @@ const KNOWN_SOURCE_FIELDS = [
 // `flair` is the per-subreddit Reddit flair config; it has its own editor
 // (RedditFlairEditor) rather than the generic value editors, so it's treated as
 // structured to keep it out of the Custom group and the "Add field" menu.
-const STRUCTURED_KEYS = [ 'type', 'label', 'endpoint', 'allowedSections', 'disallowedSections', 'disabled', 'flair' ];
+// `appId` is Steam's numeric forum-scrape id, edited by the dedicated Steam
+// fields, so it's structured for the same reason.
+const STRUCTURED_KEYS = [ 'type', 'label', 'endpoint', 'allowedSections', 'disallowedSections', 'disabled', 'flair', 'appId' ];
 
 // Keys with a dedicated control in the identity header, so they're never offered
 // in the "Add field" menu. Everything else (endpoint, label, the section lists)
@@ -151,7 +159,11 @@ const endpointHelp = function endpointHelp ( type ) {
 
 const allowedSectionsHelp = function allowedSectionsHelp ( type ) {
     if ( type === 'Steam' ) {
-        return 'Steam app ID(s).';
+        // The announcements feed (/games/<id>/rss/) is keyed on the community hub
+        // id: the numeric app ID for most games, but the custom community URL name
+        // for games that set one (e.g. elite, arma-3, squad) — their numeric feed
+        // is empty. The forum scrape uses the separate Forum app ID below.
+        return 'Community hub id for announcements: the numeric app ID, or the custom community URL name if the game has one (e.g. EliteDangerous).';
     }
 
     if ( type === 'Reddit' ) {
@@ -220,6 +232,9 @@ class GameSources extends React.Component {
 
         this.handleAddService = this.handleAddService.bind( this );
         this.handleTabChange = this.handleTabChange.bind( this );
+        this.lookupSteamAppId = this.lookupSteamAppId.bind( this );
+        this.searchSteam = this.searchSteam.bind( this );
+        this.selectSteamGame = this.selectSteamGame.bind( this );
 
         this.state = {
             // currently selected source tab (by name)
@@ -227,6 +242,13 @@ class GameSources extends React.Component {
             // in-progress "add field" selection for the active source
             newField: '',
             newService: '',
+            // Steam app-id lookup feedback for the active source (reset on tab change).
+            steamLookupBusy: false,
+            steamLookupStatus: '',
+            // Steam name-search picker state for the active source (reset on tab change).
+            steamSearchQuery: '',
+            steamSearchResults: [],
+            steamSearchBusy: false,
         };
     }
 
@@ -309,6 +331,12 @@ class GameSources extends React.Component {
         this.setState( {
             activeService: value,
             newField: '',
+            // The lookup/search feedback is for the source being left; clear it.
+            steamLookupBusy: false,
+            steamLookupStatus: '',
+            steamSearchQuery: '',
+            steamSearchResults: [],
+            steamSearchBusy: false,
         } );
     }
 
@@ -650,7 +678,400 @@ class GameSources extends React.Component {
         return fields;
     }
 
+    // Whether this source routes to the Steam reader (explicit `type` or, when
+    // absent, the source name — matching how the rest of this file resolves type).
+    isSteamSource ( service, serviceValue ) {
+        return ( serviceValue.type || service ) === 'Steam';
+    }
+
+    // Resolve the numeric Forum app ID from the Announcements feed ID via the
+    // /api/steam-resolve endpoint (server.js / vite dev mirror -> steam.js). The
+    // feed id (a vanity slug for custom-URL games) can't be reused for the forum
+    // scrape, but the community page it points at links the numeric app id, so we
+    // read it from there and fill the field. The announcement count is surfaced so
+    // a zero (an empty feed under that id) flags a wrong feed id at a glance.
+    lookupSteamAppId ( service ) {
+        const serviceValue = this.props.sources[ service ] || {};
+        const feedId = Array.isArray( serviceValue.allowedSections )
+            ? serviceValue.allowedSections[ 0 ] || ''
+            : '';
+
+        if ( !feedId ) {
+            this.setState( {
+                steamLookupStatus: 'Enter an announcements feed ID first.',
+            } );
+
+            return;
+        }
+
+        this.setState( {
+            steamLookupBusy: true,
+            steamLookupStatus: 'Looking up…',
+        } );
+
+        fetch( `/api/steam-resolve?id=${ encodeURIComponent( feedId ) }` )
+            .then( ( response ) => {
+                if ( !response.ok ) {
+                    return {
+                        error: 'Steam lookup failed.',
+                    };
+                }
+
+                return response.json();
+            } )
+            .then( ( body ) => {
+                if ( body.error || !body.appId ) {
+                    this.setState( {
+                        steamLookupBusy: false,
+                        steamLookupStatus: body.error || 'Could not resolve an app ID — check the feed ID.',
+                    } );
+
+                    return;
+                }
+
+                this.updateField( service, 'appId', body.appId );
+
+                const count = typeof body.announcements === 'number'
+                    ? body.announcements
+                    : null;
+                const countText = count === null
+                    ? ''
+                    : ` • ${ count } announcement${ count === 1 ? '' : 's' } on this feed`;
+                const emptyWarning = count === 0
+                    ? ' — feed is empty, use the game’s custom community URL as the feed ID'
+                    : '';
+
+                this.setState( {
+                    steamLookupBusy: false,
+                    steamLookupStatus: `✓ app ${ body.appId }${ countText }${ emptyWarning }`,
+                } );
+            } )
+            .catch( () => {
+                this.setState( {
+                    steamLookupBusy: false,
+                    steamLookupStatus: 'Lookup failed.',
+                } );
+            } );
+    }
+
+    // Search Steam's catalogue by game name via /api/steam-search (server.js /
+    // vite dev mirror -> steam.js) so the admin picks a game instead of pasting a
+    // numeric id. Results populate the picker list; selecting one fills both id
+    // fields (see selectSteamGame).
+    searchSteam () {
+        const query = this.state.steamSearchQuery.trim();
+
+        if ( !query ) {
+            return;
+        }
+
+        this.setState( {
+            steamSearchBusy: true,
+            steamSearchResults: [],
+            steamLookupStatus: '',
+        } );
+
+        fetch( `/api/steam-search?q=${ encodeURIComponent( query ) }` )
+            .then( ( response ) => {
+                if ( !response.ok ) {
+                    return {
+                        error: 'Steam search failed.',
+                    };
+                }
+
+                return response.json();
+            } )
+            .then( ( body ) => {
+                if ( body.error ) {
+                    this.setState( {
+                        steamSearchBusy: false,
+                        steamLookupStatus: body.error,
+                    } );
+
+                    return;
+                }
+
+                const results = body.results || [];
+
+                this.setState( {
+                    steamSearchBusy: false,
+                    steamSearchResults: results,
+                    steamLookupStatus: results.length ? '' : 'No matches found.',
+                } );
+            } )
+            .catch( () => {
+                this.setState( {
+                    steamSearchBusy: false,
+                    steamLookupStatus: 'Steam search failed.',
+                } );
+            } );
+    }
+
+    // Apply a picked search result: the appid is both the forum app id and the
+    // default announcements feed id, so fill both. Then confirm the feed via
+    // /api/steam-resolve — for the rare custom-URL game the numeric feed is empty,
+    // and the status line tells the admin to swap the feed ID for the vanity slug
+    // (which isn't resolvable from the app id, so it must be typed by hand).
+    selectSteamGame ( service, result ) {
+        this.updateField( service, 'appId', result.appId );
+        this.updateField( service, 'allowedSections', [ result.appId ] );
+
+        this.setState( {
+            steamSearchResults: [],
+            steamSearchQuery: '',
+            steamLookupBusy: true,
+            steamLookupStatus: `Checking ${ result.name }…`,
+        } );
+
+        fetch( `/api/steam-resolve?id=${ encodeURIComponent( result.appId ) }` )
+            .then( ( response ) => {
+                if ( !response.ok ) {
+                    return {};
+                }
+
+                return response.json();
+            } )
+            .then( ( body ) => {
+                const count = typeof body.announcements === 'number'
+                    ? body.announcements
+                    : null;
+                const countText = count === null
+                    ? ''
+                    : ` • ${ count } announcement${ count === 1 ? '' : 's' }`;
+                const emptyWarning = count === 0
+                    ? ' — numeric feed is empty; enter this game’s custom community URL slug as the Announcements feed ID'
+                    : '';
+
+                this.setState( {
+                    steamLookupBusy: false,
+                    steamLookupStatus: `✓ ${ result.name } — app ${ result.appId }${ countText }${ emptyWarning }`,
+                } );
+            } )
+            .catch( () => {
+                this.setState( {
+                    steamLookupBusy: false,
+                    steamLookupStatus: `✓ ${ result.name } — app ${ result.appId }`,
+                } );
+            } );
+    }
+
+    // The Steam name-search picker: a search box + result list (mirroring
+    // BoxartPicker) rendered above the id fields. Picking a result fills both ids
+    // so the admin never pastes a number. Returns an array of elements to splice
+    // into renderSteamFields.
+    renderSteamSearch ( service ) {
+        const elements = [
+            <Box
+                key = { 'steamSearch' }
+                sx = { {
+                    maxWidth: FIELD_MAX_WIDTH,
+                    mt: 1.5,
+                } }
+            >
+                <TextField
+                    fullWidth
+                    helperText = { 'Type a game name and pick a result to fill the IDs below automatically.' }
+                    label = { 'Search Steam for a game' }
+                    onChange = { ( event ) => {
+                        this.setState( {
+                            steamSearchQuery: event.target.value,
+                        } );
+                    } }
+                    onKeyDown = { ( event ) => {
+                        if ( event.key === 'Enter' ) {
+                            event.preventDefault();
+                            this.searchSteam();
+                        }
+                    } }
+                    placeholder = { 'e.g. Elite Dangerous' }
+                    size = { 'small' }
+                    slotProps = { {
+                        input: {
+                            endAdornment: (
+                                <InputAdornment position = { 'end' }>
+                                    <IconButton
+                                        disabled = { this.state.steamSearchBusy || !this.state.steamSearchQuery.trim() }
+                                        edge = { 'end' }
+                                        onClick = { () => {
+                                            this.searchSteam();
+                                        } }
+                                        size = { 'small' }
+                                        title = { 'Search Steam games' }
+                                    >
+                                        { this.state.steamSearchBusy
+                                            ? <CircularProgress size = { 18 } />
+                                            : <SearchIcon fontSize = { 'small' } /> }
+                                    </IconButton>
+                                </InputAdornment>
+                            ),
+                        },
+                    } }
+                    value = { this.state.steamSearchQuery }
+                    variant = { 'outlined' }
+                />
+            </Box>,
+        ];
+
+        if ( this.state.steamSearchResults.length ) {
+            elements.push(
+                <List
+                    dense
+                    disablePadding
+                    key = { 'steamSearchResults' }
+                    sx = { {
+                        border: 1,
+                        borderColor: 'divider',
+                        borderRadius: 1,
+                        maxHeight: 232,
+                        maxWidth: FIELD_MAX_WIDTH,
+                        mt: 1,
+                        overflowY: 'auto',
+                    } }
+                >
+                    { this.state.steamSearchResults.map( ( result ) => {
+                        return (
+                            <ListItemButton
+                                key = { result.appId }
+                                onClick = { () => {
+                                    this.selectSteamGame( service, result );
+                                } }
+                            >
+                                { result.icon
+                                    ? <Avatar
+                                        src = { result.icon }
+                                        sx = { {
+                                            height: 24,
+                                            mr: 1.5,
+                                            width: 24,
+                                        } }
+                                        variant = { 'rounded' }
+                                    />
+                                    : null }
+                                <ListItemText
+                                    primary = { result.name }
+                                    secondary = { `App ${ result.appId }` }
+                                />
+                            </ListItemButton>
+                        );
+                    } ) }
+                </List>,
+            );
+        }
+
+        return elements;
+    }
+
+    // Steam needs two ids: the community hub id for the announcements feed
+    // (allowedSections[0], a vanity slug for custom-URL games) and the numeric
+    // app id for the forum scrape (appId, optional — defaults to the feed id).
+    // Rendered as two single-value text fields (the reader only reads [0]) plus a
+    // lookup that derives the app id from the feed id. Both are always shown so
+    // clearing one doesn't make the field vanish mid-edit.
+    renderSteamFields ( service, serviceValue ) {
+        const feedId = Array.isArray( serviceValue.allowedSections )
+            ? serviceValue.allowedSections[ 0 ] || ''
+            : '';
+        const appId = serviceValue.appId === undefined || serviceValue.appId === null
+            ? ''
+            : String( serviceValue.appId );
+
+        return [
+            ...this.renderSteamSearch( service ),
+            <Box
+                key = { 'allowedSections' }
+                sx = { {
+                    maxWidth: FIELD_MAX_WIDTH,
+                    mt: 1.5,
+                } }
+            >
+                <TextField
+                    fullWidth
+                    helperText = { allowedSectionsHelp( 'Steam' ) }
+                    label = { 'Announcements feed ID' }
+                    onChange = { ( event ) => {
+                        const value = event.target.value.trim();
+
+                        if ( !value ) {
+                            this.removeField( service, 'allowedSections' );
+
+                            return;
+                        }
+
+                        this.updateField( service, 'allowedSections', [ value ] );
+                    } }
+                    size = { 'small' }
+                    value = { feedId }
+                    variant = { 'outlined' }
+                />
+            </Box>,
+            <Box
+                key = { 'appId' }
+                sx = { {
+                    alignItems: 'flex-start',
+                    display: 'flex',
+                    gap: 1,
+                    maxWidth: FIELD_MAX_WIDTH,
+                    mt: 1.5,
+                } }
+            >
+                <TextField
+                    fullWidth
+                    helperText = { 'Numeric app ID for the forum/discussions scrape. Leave blank to reuse the feed ID.' }
+                    label = { 'Forum app ID' }
+                    onChange = { ( event ) => {
+                        const value = event.target.value.trim();
+
+                        if ( !value ) {
+                            this.removeField( service, 'appId' );
+
+                            return;
+                        }
+
+                        this.updateField( service, 'appId', value );
+                    } }
+                    size = { 'small' }
+                    value = { appId }
+                    variant = { 'outlined' }
+                />
+                <Button
+                    disabled = { this.state.steamLookupBusy || !feedId }
+                    onClick = { () => {
+                        this.lookupSteamAppId( service );
+                    } }
+                    size = { 'small' }
+                    startIcon = { <SearchIcon /> }
+                    sx = { {
+                        flexShrink: 0,
+                        mt: 0.5,
+                    } }
+                >
+                    { 'Look up' }
+                </Button>
+            </Box>,
+            this.state.steamLookupStatus
+                ? <Typography
+                    color = { 'text.secondary' }
+                    key = { 'steamLookupStatus' }
+                    sx = { {
+                        display: 'block',
+                        mt: 0.5,
+                    } }
+                    variant = { 'caption' }
+                >
+                    { this.state.steamLookupStatus }
+                </Typography>
+                : null,
+        ].filter( Boolean );
+    }
+
     sectionFields ( service, serviceValue ) {
+        // Steam ignores disallowedSections and needs a numeric appId alongside the
+        // feed id, so it gets its own two-field editor (+ lookup) rather than the
+        // allowed/disallowed chip lists.
+        if ( this.isSteamSource( service, serviceValue ) ) {
+            return this.renderSteamFields( service, serviceValue );
+        }
+
         const fields = [];
 
         if ( serviceValue.allowedSections !== undefined ) {
@@ -674,8 +1095,16 @@ class GameSources extends React.Component {
     // of things you can add. freeSolo, so an unlisted custom key can be typed in.
     renderAddField ( service ) {
         const serviceValue = this.props.sources[ service ] || {};
+        // Steam's section fields are handled by the dedicated single app-ID input
+        // (allowedSections is always shown; disallowedSections is ignored by the
+        // reader), so neither should be offered as an addable chip list here.
+        const isSteam = this.isSteamSource( service, serviceValue );
         const available = KNOWN_SOURCE_FIELDS
             .filter( ( field ) => {
+                if ( isSteam && ( field.key === 'allowedSections' || field.key === 'disallowedSections' ) ) {
+                    return false;
+                }
+
                 return !ALWAYS_SHOWN_KEYS.includes( field.key )
                     && !Reflect.apply( {}.hasOwnProperty, serviceValue, [ field.key ] );
             } )
