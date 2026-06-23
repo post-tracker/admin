@@ -4,7 +4,6 @@ import deepEqual from 'deep-equal';
 import cookie from 'react-cookies';
 import alphanumSort from 'alphanum-sort';
 
-import Autocomplete from '@mui/material/Autocomplete';
 import Box from '@mui/material/Box';
 import Snackbar from '@mui/material/Snackbar';
 import TextField from '@mui/material/TextField';
@@ -57,7 +56,6 @@ class Games extends React.Component {
         this.getGameData = this.getGameData.bind( this );
         this.getGamesData = this.getGamesData.bind( this );
         this.getCurrentGame = this.getCurrentGame.bind( this );
-        this.handleGamePick = this.handleGamePick.bind( this );
         this.handleFilterChange = this.handleFilterChange.bind( this );
         this.handleSnackbarClose = this.handleSnackbarClose.bind( this );
         this.openSnackbar = this.openSnackbar.bind( this );
@@ -162,22 +160,6 @@ class Games extends React.Component {
         this.setState( {
             snackbarOpen: false,
         } );
-    }
-
-    handleGamePick ( event, game ) {
-        if ( !game || !game.identifier ) {
-            return;
-        }
-
-        // Drive selection through the URL so the choice is deep-linkable and
-        // back/forward works; the routeGameId prop change then loads the game
-        // (see componentDidUpdate). Fall back to a direct select if rendered
-        // without the router wrapper.
-        if ( this.props.onSelectGame ) {
-            this.props.onSelectGame( game.identifier );
-        } else {
-            this.selectGame( game.identifier );
-        }
     }
 
     handleFilterChange ( event ) {
@@ -381,45 +363,7 @@ class Games extends React.Component {
         return (
             <div>
                 <Header
-                    actions = {
-                        <React.Fragment>
-                            <Autocomplete
-                                disableClearable
-                                getOptionLabel = { ( game ) => {
-                                    return game.name || '';
-                                } }
-                                isOptionEqualToValue = { ( option, value ) => {
-                                    return option.identifier === value.identifier;
-                                } }
-                                onChange = { this.handleGamePick }
-                                options = { this.state.games }
-                                renderInput = { ( params ) => {
-                                    return (
-                                        <TextField
-                                            { ...params }
-                                            label = { 'Switch game' }
-                                            size = { 'small' }
-                                            variant = { 'outlined' }
-                                        />
-                                    );
-                                } }
-                                sx = { {
-                                    // Grow to fill the mobile actions row beside
-                                    // the Add-game button; fixed width on desktop.
-                                    flexGrow: {
-                                        sm: 0,
-                                        xs: 1,
-                                    },
-                                    minWidth: 0,
-                                    width: {
-                                        sm: 260,
-                                    },
-                                } }
-                                value = { currentGame }
-                            />
-                            <AddGame />
-                        </React.Fragment>
-                    }
+                    actions = { <AddGame /> }
                     onNavigate = { this.props.onNavigate }
                     view = { 'games' }
                 />

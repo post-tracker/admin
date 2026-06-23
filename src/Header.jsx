@@ -5,6 +5,7 @@ import Box from '@mui/material/Box';
 import Toolbar from '@mui/material/Toolbar';
 import Typography from '@mui/material/Typography';
 
+import GameSwitcher from './GameSwitcher.jsx';
 import NavTabs from './NavTabs.jsx';
 
 // The single application header shared by every view: the product name on the
@@ -76,6 +77,7 @@ const Header = ( props ) => {
                         },
                     } }
                 >
+                    <GameSwitcher />
                     { props.actions }
                 </Box>
             </Toolbar>
