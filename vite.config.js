@@ -6,6 +6,7 @@ import express from 'express';
 import { getQueueCounts } from './queues.js';
 import { isConfigured as twitchConfigured, searchGames } from './twitch.js';
 import { findRedditDevelopers, sampleFlairs } from './reddit.js';
+import { findRssDevelopers } from './rss.js';
 import { findSteamDevelopers, resolveSteam, searchSteamGames } from './steam.js';
 import { addIgnore, discover as discoverGames, removeIgnore } from './gameFinder.js';
 import { createQueuesRouter } from './bullBoard.js';
@@ -211,6 +212,31 @@ const steamDevsPlugin = {
     },
 };
 
+// Mirrors server.js's /api/rss-devs route in dev so the Game Sources editor's
+// RSS developer finder works under `vite`. The feed endpoint arrives in the
+// query string; no credentials needed (public feeds).
+const rssDevsPlugin = {
+    name: 'dev-api-rss-devs',
+    configureServer ( server ) {
+        server.middlewares.use( '/api/rss-devs', async ( request, response ) => {
+            response.setHeader( 'Content-Type', 'application/json' );
+
+            try {
+                const endpoint = new URL( request.url, 'http://localhost' ).searchParams.get( 'endpoint' );
+
+                response.end( JSON.stringify( {
+                    developers: await findRssDevelopers( endpoint ),
+                } ) );
+            } catch ( rssError ) {
+                response.statusCode = 500;
+                response.end( JSON.stringify( {
+                    error: rssError.message,
+                } ) );
+            }
+        } );
+    },
+};
+
 // Mirrors server.js's /api/game-finder routes in dev so the Game Finder page
 // works under `vite`. The middleware is mounted at the base path, so the
 // sub-path (/ignore, /unignore) arrives in request.url; ?force=1 bypasses the
@@ -307,6 +333,7 @@ export default defineConfig( {
         steamResolvePlugin,
         steamSearchPlugin,
         steamDevsPlugin,
+        rssDevsPlugin,
         gameFinderPlugin,
         bullBoardPlugin,
     ],

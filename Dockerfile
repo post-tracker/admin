@@ -24,6 +24,7 @@ COPY queues.js ./
 COPY bullBoard.js ./
 COPY twitch.js ./
 COPY reddit.js ./
+COPY rss.js ./
 COPY steam.js ./
 COPY gameFinder.js ./
 COPY ignoreStore.js ./

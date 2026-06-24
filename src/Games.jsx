@@ -13,6 +13,7 @@ import GameInfo from './GameInfo.jsx';
 import AddDeveloper from './AddDeveloper.jsx';
 import SteamDeveloperFinder from './SteamDeveloperFinder.jsx';
 import RedditDeveloperFinder from './RedditDeveloperFinder.jsx';
+import RssDeveloperFinder from './RssDeveloperFinder.jsx';
 import AddGame from './AddGame.jsx';
 import Header from './Header.jsx';
 import api from './api.js';
@@ -450,6 +451,17 @@ class Games extends React.Component {
                             }
                             { currentGame &&
                                 <RedditDeveloperFinder
+                                    developers = { Array.isArray( this.state.developers ) ? this.state.developers : [] }
+                                    game = { currentGame }
+                                    onPickDeveloper = { ( prefill ) => {
+                                        this.setState( {
+                                            prefill: prefill,
+                                        } );
+                                    } }
+                                />
+                            }
+                            { currentGame &&
+                                <RssDeveloperFinder
                                     developers = { Array.isArray( this.state.developers ) ? this.state.developers : [] }
                                     game = { currentGame }
                                     onPickDeveloper = { ( prefill ) => {

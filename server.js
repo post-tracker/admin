@@ -8,6 +8,7 @@ import cookieParser from 'cookie-parser';
 import { getQueueCounts } from './queues.js';
 import { isConfigured as twitchConfigured, searchGames } from './twitch.js';
 import { findRedditDevelopers, sampleFlairs } from './reddit.js';
+import { findRssDevelopers } from './rss.js';
 import { findSteamDevelopers, resolveSteam, searchSteamGames } from './steam.js';
 import { addIgnore, discover as discoverGames, removeIgnore } from './gameFinder.js';
 import { createQueuesRouter } from './bullBoard.js';
@@ -159,6 +160,24 @@ app.get( '/api/steam-devs', async ( request, response ) => {
         console.error( steamError );
         response.status( INTERNAL_SERVER_ERROR ).json( {
             error: 'Steam developer lookup failed',
+        } );
+    }
+} );
+
+// RSS developer finder for the Game Sources editor: given a feed `endpoint`,
+// reads the feed and returns the distinct <dc:creator> authors — the people
+// writing a dev blog, the set grunt attributes posts to. The browser can't read
+// most feeds (CORS), so it happens here; see rss.js findRssDevelopers. A broken
+// or blocked feed throws and is reported as 500.
+app.get( '/api/rss-devs', async ( request, response ) => {
+    try {
+        response.json( {
+            developers: await findRssDevelopers( request.query.endpoint ),
+        } );
+    } catch ( rssError ) {
+        console.error( rssError );
+        response.status( INTERNAL_SERVER_ERROR ).json( {
+            error: 'RSS developer lookup failed',
         } );
     }
 } );
