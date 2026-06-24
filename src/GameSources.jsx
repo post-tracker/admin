@@ -1327,12 +1327,19 @@ class GameSources extends React.Component {
                             variant = { 'scrollable' }
                         >
                             { services.map( ( service ) => {
+                                // Show the source's `label` (its human name, e.g.
+                                // an 'RSS'-keyed source labelled 'Thursdoid') on the
+                                // tab, falling back to the object key when unlabelled
+                                // — matching what the "Add account" picker offers and
+                                // what queue-users resolves accounts against.
+                                const tabLabel = this.props.sources[ service ].label || service;
+
                                 return (
                                     <Tab
                                         icon = { this.renderSourceIcon( service ) }
                                         iconPosition = { 'start' }
                                         key = { service }
-                                        label = { service }
+                                        label = { tabLabel }
                                         sx = { {
                                             minHeight: 'auto',
                                             // Disabled sources read at a glance as dimmed tabs.

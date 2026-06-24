@@ -89,14 +89,14 @@ class AddService extends React.Component {
 
         if ( this.state.isOpen ) {
             returnNodes.push(
+                // Constrained (no freeSolo): an account can only be attached to a
+                // service the game has a configured source for, so it can't be
+                // created with a service nothing will index. The value comes from
+                // onChange (a picked option), not onInputChange (free text).
                 <Autocomplete
-                    filterOptions = { ( options ) => {
-                        return options;
-                    } }
-                    freeSolo
                     fullWidth
                     key = { 'add-account-service' }
-                    onInputChange = { ( event, value ) => {
+                    onChange = { ( event, value ) => {
                         this.handleServiceChange( value );
                     } }
                     openOnFocus
@@ -111,6 +111,7 @@ class AddService extends React.Component {
                             />
                         );
                     } }
+                    value = { this.state.service || null }
                 />
             );
             returnNodes.push(
@@ -141,6 +142,7 @@ class AddService extends React.Component {
                 >
                     <Button
                         color = { 'primary' }
+                        disabled = { !this.state.service || !this.state.identifier }
                         key = { 'add-account-save-button' }
                         onClick = { this.handleSave }
                         style = { styles.saveAccountButton }

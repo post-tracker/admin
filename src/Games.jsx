@@ -195,14 +195,24 @@ class Games extends React.Component {
 
         api.get( `/${ useId }/developers` )
             .then( ( developers ) => {
-                const services = [];
                 const groups = [];
 
-                for ( let i = 0; i < developers.data.length; i = i + 1 ) {
-                    for ( let accountIndex = 0; accountIndex < developers.data[ i ].accounts.length; accountIndex = accountIndex + 1 ) {
-                        services.push( developers.data[ i ].accounts[ accountIndex ].service );
-                    }
+                // The "Add account" service picker offers only the game's
+                // configured sources, so an account can't be attached to a service
+                // nothing will index. Each source is offered by its `label` (its
+                // human name, e.g. an 'RSS'-keyed source labelled 'Thursdoid'),
+                // falling back to the config.sources key when it has no label.
+                // queue-users resolves this value back to the source (by label,
+                // then key) when fanning out jobs.
+                const game = this.state.games.find( ( candidate ) => {
+                    return candidate.identifier === useId;
+                } );
+                const sources = ( game && game.config && game.config.sources ) || {};
+                const services = Object.keys( sources ).map( ( sourceKey ) => {
+                    return ( sources[ sourceKey ] && sources[ sourceKey ].label ) || sourceKey;
+                } );
 
+                for ( let i = 0; i < developers.data.length; i = i + 1 ) {
                     if ( developers.data[ i ].group ) {
                         groups.push( developers.data[ i ].group );
                     }
