@@ -7,7 +7,7 @@ import cookieParser from 'cookie-parser';
 
 import { getQueueCounts } from './queues.js';
 import { isConfigured as twitchConfigured, searchGames } from './twitch.js';
-import { sampleFlairs } from './reddit.js';
+import { findRedditDevelopers, sampleFlairs } from './reddit.js';
 import { findSteamDevelopers, resolveSteam, searchSteamGames } from './steam.js';
 import { addIgnore, discover as discoverGames, removeIgnore } from './gameFinder.js';
 import { createQueuesRouter } from './bullBoard.js';
@@ -79,6 +79,34 @@ app.get( '/api/reddit-flairs', async ( request, response ) => {
         console.error( redditError );
         response.status( INTERNAL_SERVER_ERROR ).json( {
             error: 'Reddit flair scan failed',
+        } );
+    }
+} );
+
+// Reddit developer finder for the Game Sources editor: given a subreddit plus the
+// game's flair config (`type` + comma-separated `blocklist`), scans recent posts
+// and comment threads and returns the distinct users wearing a non-blocklisted
+// flair — the set the finder would treat as devs. Same CORS rationale as the
+// flair scan above; see reddit.js findRedditDevelopers.
+app.get( '/api/reddit-devs', async ( request, response ) => {
+    const blocklist = String( request.query.blocklist || '' )
+        .split( ',' )
+        .map( ( value ) => {
+            return value.trim();
+        } )
+        .filter( Boolean );
+
+    try {
+        response.json( {
+            developers: await findRedditDevelopers( request.query.subreddit, {
+                blocklist: blocklist,
+                type: request.query.type,
+            } ),
+        } );
+    } catch ( redditError ) {
+        console.error( redditError );
+        response.status( INTERNAL_SERVER_ERROR ).json( {
+            error: 'Reddit developer lookup failed',
         } );
     }
 } );

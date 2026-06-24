@@ -5,7 +5,7 @@ import express from 'express';
 
 import { getQueueCounts } from './queues.js';
 import { isConfigured as twitchConfigured, searchGames } from './twitch.js';
-import { sampleFlairs } from './reddit.js';
+import { findRedditDevelopers, sampleFlairs } from './reddit.js';
 import { findSteamDevelopers, resolveSteam, searchSteamGames } from './steam.js';
 import { addIgnore, discover as discoverGames, removeIgnore } from './gameFinder.js';
 import { createQueuesRouter } from './bullBoard.js';
@@ -94,6 +94,40 @@ const redditFlairsPlugin = {
                 const subreddit = new URL( request.url, 'http://localhost' ).searchParams.get( 'subreddit' );
 
                 response.end( JSON.stringify( await sampleFlairs( subreddit ) ) );
+            } catch ( redditError ) {
+                response.statusCode = 500;
+                response.end( JSON.stringify( {
+                    error: redditError.message,
+                } ) );
+            }
+        } );
+    },
+};
+
+// Mirrors server.js's /api/reddit-devs route in dev so the Game Sources editor's
+// Reddit developer finder works under `vite`. The subreddit, flair `type`, and
+// comma-separated `blocklist` arrive in the query string.
+const redditDevsPlugin = {
+    name: 'dev-api-reddit-devs',
+    configureServer ( server ) {
+        server.middlewares.use( '/api/reddit-devs', async ( request, response ) => {
+            response.setHeader( 'Content-Type', 'application/json' );
+
+            const params = new URL( request.url, 'http://localhost' ).searchParams;
+            const blocklist = ( params.get( 'blocklist' ) || '' )
+                .split( ',' )
+                .map( ( value ) => {
+                    return value.trim();
+                } )
+                .filter( Boolean );
+
+            try {
+                response.end( JSON.stringify( {
+                    developers: await findRedditDevelopers( params.get( 'subreddit' ), {
+                        blocklist: blocklist,
+                        type: params.get( 'type' ),
+                    } ),
+                } ) );
             } catch ( redditError ) {
                 response.statusCode = 500;
                 response.end( JSON.stringify( {
@@ -269,6 +303,7 @@ export default defineConfig( {
         apiQueuesPlugin,
         twitchGamesPlugin,
         redditFlairsPlugin,
+        redditDevsPlugin,
         steamResolvePlugin,
         steamSearchPlugin,
         steamDevsPlugin,

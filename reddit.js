@@ -40,6 +40,10 @@ const FLAIR_FIELDS = [ 'author_flair_css_class', 'author_flair_text' ];
 
 const SAMPLE_USER_LIMIT = 5;
 
+// The flair field a dev scan keys on when the caller doesn't specify one. Matches
+// RedditFlairEditor's DEFAULT_TYPE so the finder and the flair editor agree.
+const DEFAULT_FLAIR_TYPE = 'author_flair_css_class';
+
 const resolveConfig = function resolveConfig () {
     return {
         clientId: process.env.REDDIT_CLIENT_ID || '',
@@ -152,10 +156,11 @@ const recordFlairs = function recordFlairs ( data, seen ) {
     } );
 };
 
-// Walk a comment listing's children (and their nested replies) recording every
-// commenter's flair. Mirrors the finder's getUsersInPost recursion. 'more' stubs
-// hold only comment IDs (no author/flair), so they're skipped like the finder.
-const collectCommentFlairs = function collectCommentFlairs ( children, seen ) {
+// Walk a comment listing's children (and their nested replies) calling visit on
+// each comment's data. Mirrors the finder's getUsersInPost recursion. 'more'
+// stubs hold only comment IDs (no author/flair), so they're skipped like the
+// finder.
+const visitComments = function visitComments ( children, visit ) {
     if ( !Array.isArray( children ) ) {
         return;
     }
@@ -167,10 +172,10 @@ const collectCommentFlairs = function collectCommentFlairs ( children, seen ) {
 
         const data = child.data || {};
 
-        recordFlairs( data, seen );
+        visit( data );
 
         if ( data.replies && data.replies.data ) {
-            collectCommentFlairs( data.replies.data.children, seen );
+            visitComments( data.replies.data.children, visit );
         }
     } );
 };
@@ -184,23 +189,21 @@ const fetchPostComments = async function fetchPostComments ( permalink ) {
     return ( commentsListing && commentsListing.data && commentsListing.data.children ) || [];
 };
 
-// Sample recent posts and their comment threads across a few listings and
-// aggregate the flairs in use. Returns { flairs: [{ value, type, count,
-// sampleUsers }] } where `type` is the flair field and `count` is distinct users
-// seen wearing it. Throws on an upstream failure.
-export const sampleFlairs = async function sampleFlairs ( subreddit ) {
+// Crawl a subreddit's hot/new/top listings and the comment threads of the
+// sampled posts, calling visit(data) once per post author and once per commenter
+// (data = the Reddit "thing" carrying `author` and the flair fields). Shared by
+// sampleFlairs (aggregates by flair) and findRedditDevelopers (aggregates by
+// username). A no-op for a blank subreddit; throws on an upstream listing failure.
+const crawlSubreddit = async function crawlSubreddit ( subreddit, visit ) {
     const trimmed = String( subreddit || '' ).trim().replace( /^\/?r\//i, '' );
 
     if ( !trimmed ) {
-        return { flairs: [] };
+        return;
     }
 
     const listings = await Promise.all( LISTINGS.map( ( listing ) => {
         return fetchListing( trimmed, listing );
     } ) );
-
-    // Key each distinct flair by type+value; track the set of users wearing it.
-    const seen = new Map();
 
     // Dedupe posts across the listings so a post appearing in both hot and new
     // is only crawled once.
@@ -209,7 +212,7 @@ export const sampleFlairs = async function sampleFlairs ( subreddit ) {
     listings.flat().forEach( ( child ) => {
         const data = child.data || {};
 
-        recordFlairs( data, seen );
+        visit( data );
 
         if ( data.id && data.permalink && !permalinks.has( data.id ) ) {
             permalinks.set( data.id, data.permalink );
@@ -225,13 +228,26 @@ export const sampleFlairs = async function sampleFlairs ( subreddit ) {
 
         await Promise.all( batch.map( async ( permalink ) => {
             try {
-                collectCommentFlairs( await fetchPostComments( permalink ), seen );
+                visitComments( await fetchPostComments( permalink ), visit );
             } catch ( commentError ) {
                 // A single unreadable thread shouldn't sink the whole scan.
-                console.error( `[reddit-flairs] comment fetch failed for ${ permalink }: ${ commentError.message }` );
+                console.error( `[reddit] comment fetch failed for ${ permalink }: ${ commentError.message }` );
             }
         } ) );
     }
+};
+
+// Sample recent posts and their comment threads across a few listings and
+// aggregate the flairs in use. Returns { flairs: [{ value, type, count,
+// sampleUsers }] } where `type` is the flair field and `count` is distinct users
+// seen wearing it. Throws on an upstream failure.
+export const sampleFlairs = async function sampleFlairs ( subreddit ) {
+    // Key each distinct flair by type+value; track the set of users wearing it.
+    const seen = new Map();
+
+    await crawlSubreddit( subreddit, ( data ) => {
+        recordFlairs( data, seen );
+    } );
 
     const flairs = [ ...seen.values() ].map( ( entry ) => {
         return {
@@ -248,4 +264,58 @@ export const sampleFlairs = async function sampleFlairs ( subreddit ) {
     } );
 
     return { flairs: flairs };
+};
+
+// Discover candidate developers in a subreddit by flair. Crawls the same posts
+// and comment threads sampleFlairs does, but aggregates by username, keeping each
+// user's flair of the requested `type` (defaulting to DEFAULT_FLAIR_TYPE). A user
+// is a candidate when they wear a non-empty flair of that type whose lowercased
+// value is NOT in `blocklist` — the exact rule the finder's isDev applies (see
+// finder/modules/flair/base.js). Reddit account identifiers are the bare
+// username, so `username` doubles as the identifier to add. Returns
+// [{ username, flair, profile }] sorted by flair then username so same-flair
+// candidates cluster. Throws on an upstream failure.
+export const findRedditDevelopers = async function findRedditDevelopers ( subreddit, options ) {
+    const settings = options || {};
+    const type = settings.type || DEFAULT_FLAIR_TYPE;
+    const blocked = new Set( ( settings.blocklist || [] ).map( ( value ) => {
+        return String( value ).trim().toLowerCase();
+    } ).filter( Boolean ) );
+
+    // username -> flair value of `type`. Only flaired users are recorded, so a
+    // present key means "seen wearing a flair"; skip re-recording once set.
+    const flairByUser = new Map();
+
+    await crawlSubreddit( subreddit, ( data ) => {
+        const username = data.author;
+
+        if ( !username || username === '[deleted]' || flairByUser.has( username ) ) {
+            return;
+        }
+
+        const flair = data[ type ] && String( data[ type ] ).trim();
+
+        if ( flair ) {
+            flairByUser.set( username, flair );
+        }
+    } );
+
+    const developers = [ ...flairByUser.entries() ]
+        .filter( ( [ , flair ] ) => {
+            return !blocked.has( flair.toLowerCase() );
+        } )
+        .map( ( [ username, flair ] ) => {
+            return {
+                flair: flair,
+                profile: `${ PUBLIC_HOST }/user/${ encodeURIComponent( username ) }`,
+                username: username,
+            };
+        } );
+
+    developers.sort( ( first, second ) => {
+        return first.flair.localeCompare( second.flair )
+            || first.username.localeCompare( second.username );
+    } );
+
+    return developers;
 };
