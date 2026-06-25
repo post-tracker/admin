@@ -8,6 +8,7 @@ import Dashboard from './Dashboard.jsx';
 import Games from './Games.jsx';
 import GameFinder from './GameFinder.jsx';
 import Tokens from './Tokens.jsx';
+import { pathForView } from './navigation.js';
 
 const theme = createTheme( {
     palette: {
@@ -34,16 +35,6 @@ const theme = createTheme( {
         },
     },
 } );
-
-// The Dashboard is the home page, so its canonical path is '/'; Games and Tokens
-// sit at '/games' and '/tokens'.
-const pathForView = function pathForView ( view ) {
-    if ( view === 'dashboard' ) {
-        return '/';
-    }
-
-    return '/' + view;
-};
 
 // Each view (Dashboard/Games/Tokens) already knows its own name and hands an
 // `onNavigate(view)` callback to the shared Header/NavTabs. Bridge that existing

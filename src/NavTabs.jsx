@@ -3,16 +3,38 @@ import PropTypes from 'prop-types';
 import Tab from '@mui/material/Tab';
 import Tabs from '@mui/material/Tabs';
 
+import { isPlainLeftClick, pathForView } from './navigation.js';
+
 // Shared top-bar navigation between the Dashboard landing view and the Games
 // manager. Rendered inside each view's AppBar; the active view + switch handler
 // are owned by App.jsx.
+//
+// Each tab renders as a real anchor (component="a" + href) so the browser can
+// handle ctrl/cmd/middle-click natively (open in a new tab). A plain left-click
+// is intercepted and handled as in-app SPA navigation instead.
 const NavTabs = ( props ) => {
+    const tabs = [
+        {
+            label: 'Dashboard',
+            value: 'dashboard',
+        },
+        {
+            label: 'Games',
+            value: 'games',
+        },
+        {
+            label: 'Game Finder',
+            value: 'game-finder',
+        },
+        {
+            label: 'Tokens',
+            value: 'tokens',
+        },
+    ];
+
     return (
         <Tabs
             allowScrollButtonsMobile
-            onChange = { ( event, value ) => {
-                props.onNavigate( value );
-            } }
             scrollButtons = { 'auto' }
             sx = { {
                 // Scrollable so the four tabs never squeeze the title/actions on
@@ -27,22 +49,25 @@ const NavTabs = ( props ) => {
             value = { props.view }
             variant = { 'scrollable' }
         >
-            <Tab
-                label = { 'Dashboard' }
-                value = { 'dashboard' }
-            />
-            <Tab
-                label = { 'Games' }
-                value = { 'games' }
-            />
-            <Tab
-                label = { 'Game Finder' }
-                value = { 'game-finder' }
-            />
-            <Tab
-                label = { 'Tokens' }
-                value = { 'tokens' }
-            />
+            { tabs.map( ( tab ) => {
+                return (
+                    <Tab
+                        component = { 'a' }
+                        href = { pathForView( tab.value ) }
+                        key = { tab.value }
+                        label = { tab.label }
+                        onClick = { ( event ) => {
+                            if ( !isPlainLeftClick( event ) ) {
+                                return;
+                            }
+
+                            event.preventDefault();
+                            props.onNavigate( tab.value );
+                        } }
+                        value = { tab.value }
+                    />
+                );
+            } ) }
         </Tabs>
     );
 };

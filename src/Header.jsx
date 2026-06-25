@@ -7,6 +7,7 @@ import Typography from '@mui/material/Typography';
 
 import GameSwitcher from './GameSwitcher.jsx';
 import NavTabs from './NavTabs.jsx';
+import { isPlainLeftClick, pathForView } from './navigation.js';
 
 // The single application header shared by every view: the product name on the
 // far left (doubles as a home link to the Dashboard), primary navigation next
@@ -40,13 +41,22 @@ const Header = ( props ) => {
             >
                 <Typography
                     noWrap
-                    onClick = { () => {
+                    component = { 'a' }
+                    href = { pathForView( 'dashboard' ) }
+                    onClick = { ( event ) => {
+                        if ( !isPlainLeftClick( event ) ) {
+                            return;
+                        }
+
+                        event.preventDefault();
                         props.onNavigate( 'dashboard' );
                     } }
                     sx = { {
+                        color: 'inherit',
                         cursor: 'pointer',
                         flexShrink: 0,
                         fontWeight: 700,
+                        textDecoration: 'none',
                         mr: {
                             md: 4,
                             xs: 2,
