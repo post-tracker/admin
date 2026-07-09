@@ -42,6 +42,7 @@ import RedditFlairEditor from './RedditFlairEditor.jsx';
 // canonical spelling — so a custom-named source routes to a reader that exists.
 const KNOWN_SOURCE_TYPES = [
     'BattleNet',
+    'Bluesky',
     'Bungie.net',
     'CommLink',
     'Discourse',
@@ -99,6 +100,7 @@ const ALWAYS_SHOWN_KEYS = [ 'type', 'disabled' ];
 // is left off and added on demand via "Add field".
 const REQUIRED_FIELDS_BY_TYPE = {
     'BattleNet': [],
+    'Bluesky': [],
     'Bungie.net': [],
     'CommLink': [ 'endpoint' ],
     'Discourse': [ 'endpoint' ],
@@ -178,6 +180,7 @@ const allowedSectionsHelp = function allowedSectionsHelp ( type ) {
 // use their configured endpoint's host, so they're intentionally absent here.
 const BRAND_DOMAINS = {
     'BattleNet': 'battle.net',
+    'Bluesky': 'bsky.app',
     'Bungie.net': 'bungie.net',
     'CommLink': 'robertsspaceindustries.com',
     'Instagram': 'instagram.com',
