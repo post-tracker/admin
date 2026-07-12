@@ -252,7 +252,49 @@ class GameSources extends React.Component {
             steamSearchQuery: '',
             steamSearchResults: [],
             steamSearchBusy: false,
+            // Pending (uncommitted) chip-field text, keyed by `${service}:${key}`.
+            // Mobile keyboards send "Next"/Tab (a blur) instead of Enter, so the
+            // Autocomplete never commits the typed value and focus tabs away with
+            // the input lost. We track the in-progress text and commit it on blur.
+            chipInputs: {},
         };
+    }
+
+    chipInputKey ( service, key ) {
+        return `${ service }:${ key }`;
+    }
+
+    // Append whatever the user has typed but not yet committed (no Enter press,
+    // e.g. mobile "Next" button) to the chip list. Splits on commas so a
+    // comma-separated paste becomes multiple chips.
+    commitPendingChip ( service, key, values ) {
+        const inputKey = this.chipInputKey( service, key );
+        const pending = ( this.state.chipInputs[ inputKey ] || '' ).trim();
+
+        if ( pending.length === 0 ) {
+            return;
+        }
+
+        const additions = pending
+            .split( ',' )
+            .map( ( item ) => {
+                return item.trim();
+            } )
+            .filter( Boolean );
+
+        const current = Array.isArray( values ) ? values : [];
+
+        this.setState( ( state ) => {
+            return {
+                chipInputs: Object.assign( {}, state.chipInputs, {
+                    [ inputKey ]: '',
+                } ),
+            };
+        } );
+
+        if ( additions.length > 0 ) {
+            this.setSectionList( service, key, current.concat( additions ) );
+        }
     }
 
     getCurrentService () {
@@ -576,7 +618,29 @@ class GameSources extends React.Component {
                 <Autocomplete
                     freeSolo
                     multiple
+                    inputValue = { this.state.chipInputs[ this.chipInputKey( service, key ) ] || '' }
+                    onInputChange = { ( event, newInputValue ) => {
+                        const inputKey = this.chipInputKey( service, key );
+
+                        this.setState( ( state ) => {
+                            return {
+                                chipInputs: Object.assign( {}, state.chipInputs, {
+                                    [ inputKey ]: newInputValue,
+                                } ),
+                            };
+                        } );
+                    } }
                     onChange = { ( event, newValue ) => {
+                        // A chip was committed (Enter) or removed — clear pending text.
+                        const inputKey = this.chipInputKey( service, key );
+
+                        this.setState( ( state ) => {
+                            return {
+                                chipInputs: Object.assign( {}, state.chipInputs, {
+                                    [ inputKey ]: '',
+                                } ),
+                            };
+                        } );
                         this.setSectionList( service, key, newValue );
                     } }
                     options = { [] }
@@ -586,6 +650,11 @@ class GameSources extends React.Component {
                                 { ...params }
                                 helperText = { settings.helperText }
                                 label = { settings.label || key }
+                                onBlur = { () => {
+                                    // Mobile "Next"/Tab blurs without an Enter — commit
+                                    // whatever's typed so the value isn't silently lost.
+                                    this.commitPendingChip( service, key, values );
+                                } }
                                 placeholder = { 'Type and press Enter' }
                                 size = { 'small' }
                                 variant = { 'outlined' }
