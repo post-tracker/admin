@@ -268,17 +268,23 @@ export const sampleFlairs = async function sampleFlairs ( subreddit ) {
 
 // Discover candidate developers in a subreddit by flair. Crawls the same posts
 // and comment threads sampleFlairs does, but aggregates by username, keeping each
-// user's flair of the requested `type` (defaulting to DEFAULT_FLAIR_TYPE). A user
-// is a candidate when they wear a non-empty flair of that type whose lowercased
-// value is NOT in `blocklist` — the exact rule the finder's isDev applies (see
-// finder/modules/flair/base.js). Reddit account identifiers are the bare
-// username, so `username` doubles as the identifier to add. Returns
-// [{ username, flair, profile }] sorted by flair then username so same-flair
-// candidates cluster. Throws on an upstream failure.
+// user's flair of the requested `type` (defaulting to DEFAULT_FLAIR_TYPE).
+//
+// Two modes, mirroring the finder (finder/modules/finders/Reddit.js resolveFlair):
+//   block (default) — a user is a candidate when they wear a non-empty flair of
+//     that type whose lowercased value is NOT in `blocklist`.
+//   allow — a user is a candidate ONLY if their flair's lowercased value IS in
+//     `allowlist`. For subs where everyone wears a flair, whitelist the staff/dev
+//     flair instead of blocklisting endless community flairs.
+// Reddit account identifiers are the bare username, so `username` doubles as the
+// identifier to add. Returns [{ username, flair, profile }] sorted by flair then
+// username so same-flair candidates cluster. Throws on an upstream failure.
 export const findRedditDevelopers = async function findRedditDevelopers ( subreddit, options ) {
     const settings = options || {};
     const type = settings.type || DEFAULT_FLAIR_TYPE;
-    const blocked = new Set( ( settings.blocklist || [] ).map( ( value ) => {
+    const mode = settings.mode === 'allow' ? 'allow' : 'block';
+    const listKey = mode === 'allow' ? 'allowlist' : 'blocklist';
+    const list = new Set( ( settings[ listKey ] || [] ).map( ( value ) => {
         return String( value ).trim().toLowerCase();
     } ).filter( Boolean ) );
 
@@ -302,7 +308,9 @@ export const findRedditDevelopers = async function findRedditDevelopers ( subred
 
     const developers = [ ...flairByUser.entries() ]
         .filter( ( [ , flair ] ) => {
-            return !blocked.has( flair.toLowerCase() );
+            const isListed = list.has( flair.toLowerCase() );
+
+            return mode === 'allow' ? isListed : !isListed;
         } )
         .map( ( [ username, flair ] ) => {
             return {

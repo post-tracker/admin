@@ -90,17 +90,21 @@ app.get( '/api/reddit-flairs', async ( request, response ) => {
 // flair — the set the finder would treat as devs. Same CORS rationale as the
 // flair scan above; see reddit.js findRedditDevelopers.
 app.get( '/api/reddit-devs', async ( request, response ) => {
-    const blocklist = String( request.query.blocklist || '' )
-        .split( ',' )
-        .map( ( value ) => {
-            return value.trim();
-        } )
-        .filter( Boolean );
+    const splitList = ( raw ) => {
+        return String( raw || '' )
+            .split( ',' )
+            .map( ( value ) => {
+                return value.trim();
+            } )
+            .filter( Boolean );
+    };
 
     try {
         response.json( {
             developers: await findRedditDevelopers( request.query.subreddit, {
-                blocklist: blocklist,
+                allowlist: splitList( request.query.allowlist ),
+                blocklist: splitList( request.query.blocklist ),
+                mode: request.query.mode === 'allow' ? 'allow' : 'block',
                 type: request.query.type,
             } ),
         } );

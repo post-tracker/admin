@@ -115,17 +115,21 @@ const redditDevsPlugin = {
             response.setHeader( 'Content-Type', 'application/json' );
 
             const params = new URL( request.url, 'http://localhost' ).searchParams;
-            const blocklist = ( params.get( 'blocklist' ) || '' )
-                .split( ',' )
-                .map( ( value ) => {
-                    return value.trim();
-                } )
-                .filter( Boolean );
+            const splitList = ( raw ) => {
+                return ( raw || '' )
+                    .split( ',' )
+                    .map( ( value ) => {
+                        return value.trim();
+                    } )
+                    .filter( Boolean );
+            };
 
             try {
                 response.end( JSON.stringify( {
                     developers: await findRedditDevelopers( params.get( 'subreddit' ), {
-                        blocklist: blocklist,
+                        allowlist: splitList( params.get( 'allowlist' ) ),
+                        blocklist: splitList( params.get( 'blocklist' ) ),
+                        mode: params.get( 'mode' ) === 'allow' ? 'allow' : 'block',
                         type: params.get( 'type' ),
                     } ),
                 } ) );

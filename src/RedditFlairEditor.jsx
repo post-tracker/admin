@@ -28,6 +28,11 @@ const FLAIR_TYPES = [
     { label: 'Text (author_flair_text)', value: 'author_flair_text' },
 ];
 
+const FLAIR_MODES = [
+    { label: 'Blocklist (everyone flaired is a dev, except listed)', value: 'block' },
+    { label: 'Allowlist (only listed flairs are devs)', value: 'allow' },
+];
+
 const DEFAULT_TYPE = 'author_flair_css_class';
 
 const normalise = function normalise ( value ) {
@@ -50,7 +55,9 @@ class RedditFlairEditor extends React.Component {
         const stored = this.props.flair[ subreddit ] || {};
 
         return {
+            allowlist: Array.isArray( stored.allowlist ) ? stored.allowlist : [],
             blocklist: Array.isArray( stored.blocklist ) ? stored.blocklist : [],
+            mode: stored.mode === 'allow' ? 'allow' : 'block',
             type: stored.type || DEFAULT_TYPE,
         };
     }
@@ -63,29 +70,37 @@ class RedditFlairEditor extends React.Component {
         this.props.onChange( next );
     }
 
-    // Blocklist values are matched case-insensitively by the finder, so store
-    // them lowercased and de-duplicated.
-    setBlocklist ( subreddit, list ) {
+    // The active list key for a subreddit given its mode.
+    listKeyFor ( subreddit ) {
+        return this.configFor( subreddit ).mode === 'allow' ? 'allowlist' : 'blocklist';
+    }
+
+    // List values are matched case-insensitively by the finder, so store them
+    // lowercased and de-duplicated. Writes whichever list the mode selects.
+    setList ( subreddit, list ) {
         const cleaned = [ ...new Set( list.map( normalise ).filter( Boolean ) ) ];
 
         this.updateConfig( subreddit, {
-            blocklist: cleaned,
+            [ this.listKeyFor( subreddit ) ]: cleaned,
         } );
     }
 
-    toggleBlocked ( subreddit, value ) {
-        const current = this.configFor( subreddit ).blocklist;
+    // Toggle a flair value in the active list. In block mode clicking a scanned
+    // flair excludes it (adds to blocklist); in allow mode clicking includes it
+    // (adds to allowlist).
+    toggleListed ( subreddit, value ) {
         const key = normalise( value );
+        const current = this.configFor( subreddit )[ this.listKeyFor( subreddit ) ];
 
         if ( current.includes( key ) ) {
-            this.setBlocklist( subreddit, current.filter( ( item ) => {
+            this.setList( subreddit, current.filter( ( item ) => {
                 return item !== key;
             } ) );
 
             return;
         }
 
-        this.setBlocklist( subreddit, current.concat( key ) );
+        this.setList( subreddit, current.concat( key ) );
     }
 
     async scan ( subreddit ) {
@@ -186,15 +201,17 @@ class RedditFlairEditor extends React.Component {
             );
         }
 
-        const type = this.configFor( subreddit ).type;
-        const blocklist = this.configFor( subreddit ).blocklist;
+        const config = this.configFor( subreddit );
+        const type = config.type;
+        const mode = config.mode;
+        const activeList = mode === 'allow' ? config.allowlist : config.blocklist;
         const ofType = scan.flairs.filter( ( flair ) => {
             return flair.type === type;
         } );
-        // Flairs already in the blocklist live in the field above; only surface
-        // the ones still treated as devs so the scan is a to-curate shortlist.
+        // In block mode only surface flairs NOT yet blocked (to-exclude shortlist).
+        // In allow mode only surface flairs NOT yet allowed (to-include shortlist).
         const matching = ofType.filter( ( flair ) => {
-            return !blocklist.includes( normalise( flair.value ) );
+            return !activeList.includes( normalise( flair.value ) );
         } );
         const otherType = scan.flairs.length - ofType.length;
 
@@ -204,7 +221,9 @@ class RedditFlairEditor extends React.Component {
             if ( otherType > 0 ) {
                 emptyMessage = `No ${ type } flairs seen, but ${ otherType } of the other type were — try switching the flair type above.`;
             } else if ( ofType.length > 0 ) {
-                emptyMessage = 'Every flair seen is already in the blocklist.';
+                emptyMessage = mode === 'allow'
+                    ? 'Every flair seen is already in the allowlist.'
+                    : 'Every flair seen is already in the blocklist.';
             }
 
             return (
@@ -234,7 +253,9 @@ class RedditFlairEditor extends React.Component {
                     } }
                     variant = { 'caption' }
                 >
-                    { 'Each flair below is treated as a dev. Click one to exclude it (move it to the blocklist). The count is how many distinct users wore it in the sample.' }
+                    { mode === 'allow'
+                        ? 'Click a flair to add it to the allowlist (its wearers become devs). The count is how many distinct users wore it in the sample.'
+                        : 'Each flair below is treated as a dev. Click one to exclude it (move it to the blocklist). The count is how many distinct users wore it in the sample.' }
                 </Typography>
                 <Box
                     sx = { {
@@ -249,10 +270,12 @@ class RedditFlairEditor extends React.Component {
                                 key = { flair.value }
                                 label = { `${ flair.value } (${ flair.count })` }
                                 onClick = { () => {
-                                    this.toggleBlocked( subreddit, flair.value );
+                                    this.toggleListed( subreddit, flair.value );
                                 } }
                                 size = { 'small' }
-                                title = { `Treated as a dev · worn by ${ flair.count } user(s): ${ flair.sampleUsers.join( ', ' ) }` }
+                                title = { mode === 'allow'
+                                    ? `Click to allow · worn by ${ flair.count } user(s): ${ flair.sampleUsers.join( ', ' ) }`
+                                    : `Treated as a dev · worn by ${ flair.count } user(s): ${ flair.sampleUsers.join( ', ' ) }` }
                                 variant = { 'outlined' }
                             />
                         );
@@ -317,6 +340,32 @@ class RedditFlairEditor extends React.Component {
                             );
                         } ) }
                     </TextField>
+                    <TextField
+                        label = { 'Mode' }
+                        onChange = { ( event ) => {
+                            this.updateConfig( subreddit, {
+                                mode: event.target.value,
+                            } );
+                        } }
+                        select
+                        size = { 'small' }
+                        sx = { {
+                            width: 380,
+                        } }
+                        value = { config.mode }
+                        variant = { 'outlined' }
+                    >
+                        { FLAIR_MODES.map( ( option ) => {
+                            return (
+                                <MenuItem
+                                    key = { option.value }
+                                    value = { option.value }
+                                >
+                                    { option.label }
+                                </MenuItem>
+                            );
+                        } ) }
+                    </TextField>
                     <Button
                         disabled = { scanning }
                         onClick = { () => {
@@ -342,15 +391,22 @@ class RedditFlairEditor extends React.Component {
                         // rest so the field doesn't become a wall of chips.
                         limitTags = { 10 }
                         onChange = { ( event, newValue ) => {
-                            this.setBlocklist( subreddit, newValue );
+                            this.setList( subreddit, newValue );
                         } }
                         options = { [] }
                         renderInput = { ( params ) => {
+                            const isAllow = config.mode === 'allow';
+                            const activeList = isAllow ? config.allowlist : config.blocklist;
+                            const listLabel = isAllow ? 'Allowlist' : 'Blocklist';
+                            const noun = isAllow ? 'dev flair' : 'non-dev flair';
+
                             return (
                                 <TextField
                                     { ...params }
-                                    helperText = { 'Flairs that are NOT developers. Anyone with another flair of the type above is treated as a dev.' }
-                                    label = { `Blocklist — ${ config.blocklist.length } non-dev flair${ config.blocklist.length === 1 ? '' : 's' }` }
+                                    helperText = { isAllow
+                                        ? 'ONLY these flairs are treated as developers. Anyone with any other flair (or none) is ignored.'
+                                        : 'Flairs that are NOT developers. Anyone with another flair of the type above is treated as a dev.' }
+                                    label = { `${ listLabel } — ${ activeList.length } ${ noun }${ activeList.length === 1 ? '' : 's' }` }
                                     placeholder = { 'Type and press Enter' }
                                     size = { 'small' }
                                     variant = { 'outlined' }
@@ -358,7 +414,7 @@ class RedditFlairEditor extends React.Component {
                             );
                         } }
                         // Bound the chip area when expanded (focused) too, so editing
-                        // a large blocklist scrolls within a few rows rather than
+                        // a large list scrolls within a few rows rather than
                         // pushing the rest of the form far down the page.
                         sx = { {
                             '& .MuiAutocomplete-inputRoot': {
@@ -366,7 +422,7 @@ class RedditFlairEditor extends React.Component {
                                 overflowY: 'auto',
                             },
                         } }
-                        value = { config.blocklist }
+                        value = { config.mode === 'allow' ? config.allowlist : config.blocklist }
                     />
                 </Box>
             </Box>

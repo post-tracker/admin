@@ -93,8 +93,11 @@ class RedditDeveloperFinder extends React.Component {
     // developers array, or rejects so handleOpen can report the failure.
     async scanSubreddit ( subreddit, flair ) {
         const config = flair[ subreddit ] || {};
+        const mode = config.mode === 'allow' ? 'allow' : 'block';
         const params = new URLSearchParams( {
+            allowlist: ( Array.isArray( config.allowlist ) ? config.allowlist : [] ).join( ',' ),
             blocklist: ( Array.isArray( config.blocklist ) ? config.blocklist : [] ).join( ',' ),
+            mode: mode,
             subreddit: subreddit,
             type: config.type || DEFAULT_FLAIR_TYPE,
         } );
