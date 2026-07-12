@@ -308,9 +308,18 @@ export const findRedditDevelopers = async function findRedditDevelopers ( subred
 
     const developers = [ ...flairByUser.entries() ]
         .filter( ( [ , flair ] ) => {
-            const isListed = list.has( flair.toLowerCase() );
+            const value = flair.toLowerCase();
+            // allow: dev if the flair CONTAINS any allowlist entry (substring,
+            // mirroring the finder — handles rotating prefixes like Destiny's
+            // 'SS6 5-7 Verified-Bungie-Employee'). block: dev unless the flair's
+            // exact value is in the blocklist.
+            if ( mode === 'allow' ) {
+                return [ ...list ].some( ( entry ) => {
+                    return value.includes( entry );
+                } );
+            }
 
-            return mode === 'allow' ? isListed : !isListed;
+            return !list.has( value );
         } )
         .map( ( [ username, flair ] ) => {
             return {

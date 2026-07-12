@@ -404,7 +404,7 @@ class RedditFlairEditor extends React.Component {
                                 <TextField
                                     { ...params }
                                     helperText = { isAllow
-                                        ? 'ONLY these flairs are treated as developers. Anyone with any other flair (or none) is ignored.'
+                                        ? 'ONLY flairs containing one of these are treated as devs (substring match — e.g. "verified-bungie-employee" catches "SS6 5-7 Verified-Bungie-Employee"). Anyone else is ignored.'
                                         : 'Flairs that are NOT developers. Anyone with another flair of the type above is treated as a dev.' }
                                     label = { `${ listLabel } — ${ activeList.length } ${ noun }${ activeList.length === 1 ? '' : 's' }` }
                                     placeholder = { 'Type and press Enter' }
